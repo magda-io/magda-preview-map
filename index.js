@@ -9,7 +9,6 @@ var terriaOptions = {
 // checkBrowserCompatibility('ui');
 import GoogleAnalytics from 'terriajs/lib/Core/GoogleAnalytics';
 import ShareDataService from 'terriajs/lib/Models/ShareDataService';
-import OgrCatalogItem from 'terriajs/lib/Models/OgrCatalogItem';
 import raiseErrorToUser from 'terriajs/lib/Models/raiseErrorToUser';
 import registerAnalytics from 'terriajs/lib/Models/registerAnalytics';
 import registerCatalogMembers from 'terriajs/lib/Models/registerCatalogMembers';
@@ -28,10 +27,6 @@ import knockout from 'terriajs-cesium/Source/ThirdParty/knockout';
 import createCatalogMemberFromType from 'terriajs/lib/Models/createCatalogMemberFromType';
 import MagdaCatalogItem from './lib/Models/MagdaCatalogItem';
 import ViewerMode from 'terriajs/lib/Models/ViewerMode.js';
-
-// Tell the OGR catalog item where to find its conversion service.  If you're not using OgrCatalogItem you can remove this.
-OgrCatalogItem.conversionServiceBaseUrl =
-    configuration.conversionServiceBaseUrl;
 
 // Register all types of catalog members in the core TerriaJS.  If you only want to register a subset of them
 // (i.e. to reduce the size of your application if you don't actually use them all), feel free to copy a subset of

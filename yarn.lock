@@ -3781,9 +3781,17 @@ invert-kv@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/invert-kv/-/invert-kv-1.0.0.tgz#104a8e4aaca6d3d8cd157a8ef8bfab2d7a3ffdb6"
 
+ip6@0.0.4:
+  version "0.0.4"
+  resolved "https://registry.yarnpkg.com/ip6/-/ip6-0.0.4.tgz#44c5a9db79e39d405201b4d78d13b3870e48db31"
+
 ip@^1.1.0, ip@^1.1.5:
   version "1.1.5"
   resolved "https://registry.yarnpkg.com/ip/-/ip-1.1.5.tgz#bdded70114290828c0a039e72ef25f5aaec4354a"
+
+ipaddr.js@1.2:
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/ipaddr.js/-/ipaddr.js-1.2.0.tgz#8aba49c9192799585bdd643e0ccb50e8ae777ba4"
 
 ipaddr.js@1.8.0:
   version "1.8.0"
@@ -4208,9 +4216,9 @@ jsonfile@^4.0.0:
   optionalDependencies:
     graceful-fs "^4.1.6"
 
-"jsonschema@git+https://github.com/terriajs/jsonschema":
+jsonschema@terriajs/jsonschema:
   version "1.0.3"
-  resolved "git+https://github.com/terriajs/jsonschema#55cedb27a265bbae2b366a3824863c586c5d34cf"
+  resolved "https://codeload.github.com/terriajs/jsonschema/tar.gz/55cedb27a265bbae2b366a3824863c586c5d34cf"
 
 jsprim@^1.2.2:
   version "1.4.1"
@@ -5965,6 +5973,13 @@ range-parser@^1.0.3, range-parser@~1.2.0:
   version "1.2.0"
   resolved "https://registry.yarnpkg.com/range-parser/-/range-parser-1.2.0.tgz#f49be6b487894ddc40dcc94a322f611092e00d5e"
 
+range_check@^1.4.0:
+  version "1.4.0"
+  resolved "https://registry.yarnpkg.com/range_check/-/range_check-1.4.0.tgz#cd87c7ac62c40ba9df69b8703c604f60c3748635"
+  dependencies:
+    ip6 "0.0.4"
+    ipaddr.js "1.2"
+
 raw-body@2.3.2:
   version "2.3.2"
   resolved "https://registry.yarnpkg.com/raw-body/-/raw-body-2.3.2.tgz#bcd60c77d3eb93cde0050295c3f379389bc88f89"
@@ -7244,9 +7259,9 @@ terriajs-schema@latest:
     when "^3.7.7"
     yargs "^3.32.0"
 
-terriajs-server@^2.7.3:
-  version "2.7.3"
-  resolved "https://registry.yarnpkg.com/terriajs-server/-/terriajs-server-2.7.3.tgz#8212838f843e136d4d498235d3f8c8d507d0e6e6"
+terriajs-server@^2.7.4:
+  version "2.7.4"
+  resolved "https://registry.yarnpkg.com/terriajs-server/-/terriajs-server-2.7.4.tgz#17c0e0f3375a8de41eb8d693c514f12217bb80ad"
   dependencies:
     aws-sdk "^2.4.4"
     base-x "^2.0.4"
@@ -7261,14 +7276,15 @@ terriajs-server@^2.7.3:
     ogr2ogr "^1.0.0"
     proj4 "^2.3.12"
     proj4js-defs "0.0.1"
+    range_check "^1.4.0"
     request "^2.67.0"
     request-promise "^4.0.1"
     when "^3.7.7"
     yargs "^6.0.0"
 
-terriajs@6.1.0:
-  version "6.1.0"
-  resolved "https://registry.yarnpkg.com/terriajs/-/terriajs-6.1.0.tgz#4c0f463f122d6bc352916e71435ca81b338917a4"
+terriajs@6.1.1:
+  version "6.1.1"
+  resolved "https://registry.yarnpkg.com/terriajs/-/terriajs-6.1.1.tgz#e12b1236ae6f5a20616776194dd7a37acb07cd6c"
   dependencies:
     "@mapbox/point-geometry" "^0.1.0"
     "@mapbox/togeojson" "^0.16.0"

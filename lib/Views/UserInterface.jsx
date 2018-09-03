@@ -63,8 +63,3 @@ export default function UserInterface(props) {
         </div>
     );
 }
-
-UserInterface.propTypes = {
-    terria: PropTypes.object,
-    viewState: PropTypes.object
-};
