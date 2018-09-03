@@ -1,7 +1,7 @@
 {
-  "name": "terriajs-map",
+  "name": "@magda/preview-map",
   "version": "0.0.1",
-  "description": "Geospatial catalog explorer based on TerriaJS.",
+  "description": "Geospatial preview based on TerriaJS.",
   "license": "Apache-2.0",
   "engines": {
     "node": ">= 5.1.0",
@@ -24,7 +24,7 @@
     "awsS3ServerConfigOverridePath": "s3://terria-apps/map/privateserverconfig-2016-08-31.json",
     "awsS3ClientConfigOverridePath": "s3://terria-apps/map/privateclientconfig-2016-08-31.json",
     "docker": {
-      "name": "data61/terria-terriamap",
+      "name": "data61/magda-preview-map",
       "include": "wwwroot node_modules devserverconfig.json index.js package.json version.js"
     }
   },
