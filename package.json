@@ -12,7 +12,7 @@
     "url": "http://github.com/TerriaJS/TerriaMap"
   },
   "dependencies": {
-    "terriajs-server": "^2.9.1"
+    "terriajs-server": "^2.7.4"
   },
   "config": {
     "awsProfile": "terria",
@@ -29,9 +29,8 @@
     }
   },
   "devDependencies": {
-    "@magda/scripts": "^0.0.57-0",
     "babel-core": "^6.7.4",
-    "babel-eslint": "^8.2.2",
+    "babel-eslint": "^7.0.0",
     "babel-loader": "^7.0.0",
     "babel-plugin-jsx-control-statements": "^3.2.8",
     "babel-polyfill": "^6.26.0",
@@ -49,6 +48,7 @@
     "gulp": "^3.9.1",
     "gulp-util": "^3.0.7",
     "json5": "^0.5.0",
+    "natives": "1.1.6",
     "node-notifier": "^5.1.2",
     "node-sass": "^4.0.0",
     "prop-types": "^15.6.0",
@@ -72,8 +72,8 @@
     "yargs": "^12.0.5"
   },
   "scripts": {
-    "start": "bash ../node_modules/terriajs-server/run_server.sh --config-file devserverconfig.json",
-    "stop": "bash ../node_modules/terriajs-server/stop_server.sh",
+    "start": "bash node_modules/terriajs-server/run_server.sh --config-file devserverconfig.json",
+    "stop": "bash node_modules/terriajs-server/stop_server.sh",
     "gulp": "gulp",
     "postinstall": "echo 'Installation with NPM successful. What to do next:\\n  npm start       # Starts the server on port 3001\\n  gulp watch      # Builds NationalMap and dependencies, and rebuilds if files change.'",
     "hot": "webpack-dev-server --inline --config buildprocess/webpack.config.hot.js --hot --host 0.0.0.0",
