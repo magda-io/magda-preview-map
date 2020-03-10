@@ -1,7 +1,7 @@
 {
-    "port": 3001,
+    "port": 6110,
 
-    "allowProxyFor" : [
+    "allowProxyFor": [
         "nicta.com.au",
         "gov.au",
         "csiro.au",
@@ -20,8 +20,6 @@
         "githubusercontent.com",
         "gov",
         "gov.uk",
-        "gov.nz",
-        "sample.aero3dpro.com.au"
+        "gov.nz"
     ]
 }
-
