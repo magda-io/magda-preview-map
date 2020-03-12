@@ -1,3 +1,9 @@
+global:
+  rollingUpdate: {}
+  image: {}
+  connectors:
+    image: {}
+
 image: {}
 autoscaler:
   enabled: false
