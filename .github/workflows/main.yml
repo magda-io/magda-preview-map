@@ -17,7 +17,6 @@ jobs:
           node-version: 10
       - run: yarn install
       - run: yarn build
-      - run: yarn test
       - name: helm-check
         uses: igabaydulin/helm-check-action@0.1.4
         env:
