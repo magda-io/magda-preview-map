@@ -1,0 +1,12 @@
+
+image:
+  imagePullSecret: gh-docker
+  tag: latest
+
+global:
+  connectors:
+    includeCronJobs: true
+    includeInitialJobs: true
+
+includeCronJobs: false
+includeInitialJobs: false
