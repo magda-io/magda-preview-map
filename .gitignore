@@ -16,6 +16,7 @@ datasources/00_National_Data_Sets.json
 /error.log
 /error.log
 /output.log
+yarn-error.log
 privateserverconfig.json
 wwwroot/privateconfig.json
 deploy/packages/
