@@ -1,0 +1,42 @@
+name: Main CI Workflow
+
+on: push
+
+env:
+  REPO_NAME: magda-preview-map
+
+jobs:
+  build-test-docker:
+    name: Build, Test & Push to Docker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Use Node.js 10
+        uses: actions/setup-node@v1
+        with:
+          node-version: 10
+      - run: yarn install
+      - run: yarn build
+      - name: helm-check
+        uses: igabaydulin/helm-check-action@0.1.4
+        env:
+          CHART_LOCATION: ./deploy/helm/preview-map/
+          CHART_VALUES: ./deploy/helm/test-deploy.yaml
+      - name: Login to GitHub Package Repository
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_ACCESS_TOKEN }}
+        run: docker login docker.pkg.github.com -u magdabot -p ${GH_TOKEN}
+      - name: Build Docker Image & Push
+        run: yarn docker-build-prod --repository=docker.pkg.github.com/magda-io/${REPO_NAME} --name=${REPO_NAME} --version=${GITHUB_SHA}
+
+  build-test-node-12:
+    name: Build, Test Only with Node 12
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Use Node.js 12
+        uses: actions/setup-node@v1
+        with:
+          node-version: 12
+      - run: yarn install
+      - run: yarn build
