@@ -25,7 +25,7 @@
     "awsS3ClientConfigOverridePath": "s3://terria-apps/map/privateclientconfig-2016-08-31.json",
     "docker": {
       "name": "data61/magda-preview-map",
-      "include": "node_modules wwwroot devserverconfig.json Dockerfile"
+      "include": "wwwroot node_modules devserverconfig.json Dockerfile index.js package.json version.js"
     }
   },
   "devDependencies": {

@@ -1,21 +1,17 @@
-import React from "react";
+import React from 'react';
+import MapColumn from 'terriajs/lib/ReactViews/StandardUserInterface/MapColumn.jsx';
+import ExplorerWindow from 'terriajs/lib/ReactViews/ExplorerWindow/ExplorerWindow.jsx';
+import FeatureInfoPanel from 'terriajs/lib/ReactViews/FeatureInfo/FeatureInfoPanel.jsx';
+import MapInteractionWindow from 'terriajs/lib/ReactViews/Notification/MapInteractionWindow.jsx';
+import ExperimentalFeatures from 'terriajs/lib/ReactViews/Map/ExperimentalFeatures.jsx';
+import Notification from 'terriajs/lib/ReactViews/Notification/Notification.jsx';
+import ProgressBar from 'terriajs/lib/ReactViews/Map/ProgressBar.jsx';
+import processCustomElements from 'terriajs/lib/ReactViews/StandardUserInterface/processCustomElements';
+import ZoomControl from 'terriajs/lib/ReactViews/Map/Navigation/ZoomControl.jsx';
+import Styles from 'terriajs/lib/ReactViews/StandardUserInterface/standard-user-interface.scss';
+import MapNavigationStyles from 'terriajs/lib/ReactViews/Map/map-navigation.scss';
 
-import version from "../../version";
-
-import MapColumn from "terriajs/lib/ReactViews/StandardUserInterface/MapColumn.jsx";
-import ExplorerWindow from "terriajs/lib/ReactViews/ExplorerWindow/ExplorerWindow.jsx";
-import FeatureInfoPanel from "terriajs/lib/ReactViews/FeatureInfo/FeatureInfoPanel.jsx";
-import MapInteractionWindow from "terriajs/lib/ReactViews/Notification/MapInteractionWindow.jsx";
-import ExperimentalFeatures from "terriajs/lib/ReactViews/Map/ExperimentalFeatures.jsx";
-import Notification from "terriajs/lib/ReactViews/Notification/Notification.jsx";
-import ObserveModelMixin from "terriajs/lib/ReactViews/ObserveModelMixin";
-import ProgressBar from "terriajs/lib/ReactViews/Map/ProgressBar.jsx";
-import processCustomElements from "terriajs/lib/ReactViews/StandardUserInterface/processCustomElements";
-import ZoomControl from "terriajs/lib/ReactViews/Map/Navigation/ZoomControl.jsx";
-import Styles from "terriajs/lib/ReactViews/StandardUserInterface/standard-user-interface.scss";
-import MapNavigationStyles from "terriajs/lib/ReactViews/Map/map-navigation.scss";
-
-import "./global.scss";
+import './global.scss';
 
 export default function UserInterface(props) {
     const customElements = processCustomElements(
@@ -26,7 +22,7 @@ export default function UserInterface(props) {
     return (
         <div className={Styles.uiRoot}>
             <div className={Styles.ui}>
-                <section className={Styles.map} style={{ top: "0px" }}>
+                <section className={Styles.map} style={{ top: '0px' }}>
                     <ProgressBar terria={terria} />
                     <MapColumn terria={terria} viewState={props.viewState} />
                     <main>
