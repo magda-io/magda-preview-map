@@ -15,6 +15,11 @@ spec:
       labels:
         service: preview-map
     spec:
+{{- $imagePullSecret := (ne (.Values.image.imagePullSecret | typeOf) "<nil>") | ternary .Values.image.imagePullSecret ( (ne (.Values.global.image.imagePullSecret | typeOf) "<nil>") | ternary .Values.global.image.imagePullSecret .Values.defaultImage.imagePullSecret ) -}}
+      {{- if ne ($imagePullSecret | toString) "false" }}
+      imagePullSecrets:
+        - name: {{ $imagePullSecret }}
+      {{- end }}
       containers:
       - name: preview-map
         resources:
@@ -31,5 +36,5 @@ spec:
         env:
         - name: NODE_ENV
           value: production
-        image: "{{ .Values.image.repository | default .Values.global.image.repository }}/{{ .Chart.Name }}:{{ .Values.image.tag | default .Values.global.image.tag }}"
+        image: "{{ .Values.image.repository | default .Values.global.image.repository | default .Values.defaultImage.repository }}/{{ .Values.image.name }}:{{ .Values.image.tag | default .Values.global.image.tag | default .Values.defaultImage.tag }}"
         imagePullPolicy: {{ .Values.image.pullPolicy | default .Values.global.image.pullPolicy }}
