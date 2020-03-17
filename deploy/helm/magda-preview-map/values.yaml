@@ -14,12 +14,12 @@ defaultImage:
   pullPolicy: IfNotPresent
   imagePullSecret: false
 
-image: 
-  name: "magda-map-preview"
-  # repository: 
-  # tag: 
-  # pullPolicy: 
-  # imagePullSecret: 
+image:
+  name: "magda-preview-map"
+  # repository:
+  # tag:
+  # pullPolicy:
+  # imagePullSecret:
 
 autoscaler:
   enabled: false
