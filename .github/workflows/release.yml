@@ -50,7 +50,7 @@ jobs:
       - name: Setup Helm
         uses: azure/setup-helm@v1
         with:
-          version: v2.16.1
+          version: v3.0.0
 
       - name: Setup AWS CLi Tools
         uses: chrislennon/action-aws-cli@v1.1
