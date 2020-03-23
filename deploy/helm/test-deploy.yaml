@@ -4,9 +4,7 @@ image:
   tag: latest
 
 global:
-  connectors:
-    includeCronJobs: true
-    includeInitialJobs: true
+  enableLivenessProbes: true
 
-includeCronJobs: false
-includeInitialJobs: false
+autoscaler:
+  enabled: true
