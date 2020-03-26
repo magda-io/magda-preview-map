@@ -22,14 +22,21 @@ import GazetteerSearchProviderViewModel from 'terriajs/lib/ViewModels/GazetteerS
 import GnafSearchProviderViewModel from 'terriajs/lib/ViewModels/GnafSearchProviderViewModel.js';
 import defined from 'terriajs-cesium/Source/Core/defined';
 import render from './lib/Views/render';
+import knockout from 'terriajs-cesium/Source/ThirdParty/knockout';
+
+import createCatalogMemberFromType from 'terriajs/lib/Models/createCatalogMemberFromType';
+import MagdaCatalogItem from './lib/Models/MagdaCatalogItem';
+import ViewerMode from 'terriajs/lib/Models/ViewerMode.js';
 
 // Register all types of catalog members in the core TerriaJS.  If you only want to register a subset of them
 // (i.e. to reduce the size of your application if you don't actually use them all), feel free to copy a subset of
 // the code in the registerCatalogMembers function here instead.
 registerCatalogMembers();
+createCatalogMemberFromType.register('magda-item', MagdaCatalogItem);
 registerAnalytics();
 
 terriaOptions.analytics = new GoogleAnalytics();
+terriaOptions.viewerMode = ViewerMode.CesiumEllipsoid;
 
 // Construct the TerriaJS application, arrange to show errors to the user, and start it up.
 var terria = new Terria(terriaOptions);
@@ -41,6 +48,18 @@ registerCustomComponentTypes(terria);
 // Create the ViewState before terria.start so that errors have somewhere to go.
 const viewState = new ViewState({
     terria: terria
+});
+
+knockout.getObservable(viewState, 'notifications').subscribe(function() {
+    if (!viewState.notifications || !viewState.notifications.length) return;
+    const notification = viewState.notifications.shift();
+    if (!notification) return;
+    let msg = '';
+    if (typeof notification === 'string') msg = notification;
+    else if (notification.message) msg = notification.message;
+    else msg = String(notification);
+    if (!console || !console.log) return;
+    console.log(`Preview Map notifcation: \n ${msg}`);
 });
 
 if (process.env.NODE_ENV === "development") {
@@ -82,7 +101,7 @@ terria.start({
         var createAustraliaBaseMapOptions = require('terriajs/lib/ViewModels/createAustraliaBaseMapOptions');
         var createGlobalBaseMapOptions = require('terriajs/lib/ViewModels/createGlobalBaseMapOptions');
         var selectBaseMap = require('terriajs/lib/ViewModels/selectBaseMap');
-
+        
         var australiaBaseMaps = createAustraliaBaseMapOptions(terria);
         var globalBaseMaps = createGlobalBaseMapOptions(terria, terria.configParameters.bingMapsKey);
 
@@ -99,7 +118,7 @@ terria.start({
                 // This can be expressed as a devHostRegex ("any site starting with staging.") or a negative prodHostRegex ("any site not ending in .gov.au")
                 if (defined(globalDisclaimer.devHostRegex) && hostname.match(globalDisclaimer.devHostRegex) ||
                     defined(globalDisclaimer.prodHostRegex) && !hostname.match(globalDisclaimer.prodHostRegex)) {
-                        message += require('./lib/Views/DevelopmentDisclaimerPreamble.html');
+                    message += require('./lib/Views/DevelopmentDisclaimerPreamble.html');
                 }
                 message += require('./lib/Views/GlobalDisclaimer.html');
 

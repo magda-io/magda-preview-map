@@ -1,0 +1,10 @@
+
+image:
+  imagePullSecret: gh-docker
+  tag: latest
+
+global:
+  enableLivenessProbes: true
+
+autoscaler:
+  enabled: true
