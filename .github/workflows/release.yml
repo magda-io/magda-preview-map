@@ -50,7 +50,7 @@ jobs:
       - name: Setup Helm
         uses: azure/setup-helm@v1
         with:
-          version: v3.0.0
+          version: v2.16.5
 
       - name: Setup AWS CLi Tools
         uses: chrislennon/action-aws-cli@v1.1
@@ -64,7 +64,7 @@ jobs:
           echo "Sync with existing charts repo in s3..."
           mkdir -p chart-repo
           aws s3 sync s3://magda-charts/ chart-repo
-          helm package ./deploy/helm/${REPO_NAME} -d chart-repo
+          helm package ./deploy/helm/${REPO_NAME} -d chart-repo --save=false
           helm repo index chart-repo
           echo "Releasing charts to s3..."
           aws s3 sync chart-repo s3://magda-charts/ --acl public-read
