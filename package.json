@@ -87,7 +87,8 @@
     "retag-and-push": "retag-and-push",
     "compile": "gulp release",
     "build": "yarn run gulp release",
-    "dev": "yarn start && gulp watch"
+    "dev": "yarn start && gulp watch",
+    "helm-lint": "helm lint deploy/helm/magda-preview-map -f deploy/helm/test-deploy.yaml"
   },
   "magda": {
     "language": "javascript",
