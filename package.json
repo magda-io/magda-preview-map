@@ -99,7 +99,8 @@
     "dev": "yarn start && gulp watch",
     "prettier": "prettier --write \"**/*\"",
     "pretty-quick": "pretty-quick",
-    "prettier-check": "prettier --check \"**/*\""
+    "prettier-check": "prettier --check \"**/*\"",
+    "helm-lint": "helm lint deploy/helm/magda-preview-map -f deploy/helm/test-deploy.yaml"
   },
   "husky": {
     "hooks": {
