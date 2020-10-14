@@ -1,6 +1,6 @@
 {
   "name": "@magda/preview-map",
-  "version": "0.0.57-0-testing-0",
+  "version": "0.0.58-alpha.0",
   "description": "Geospatial preview based on TerriaJS.",
   "license": "Apache-2.0",
   "engines": {
@@ -29,7 +29,7 @@
     }
   },
   "devDependencies": {
-    "@magda/scripts": "^0.0.57-0",
+    "@magda/scripts": "^0.0.57",
     "@babel/core": "^7.3.3",
     "babel-polyfill": "^6.26.0",
     "babel-preset-env": "^1.6.1",

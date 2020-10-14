@@ -18,14 +18,17 @@ jobs:
       - run: yarn install
       - run: yarn build
       - run: yarn gulp build
-      - name: helm-check
-        uses: igabaydulin/helm-check-action@0.1.4
-        env:
-          CHART_LOCATION: ./deploy/helm/magda-preview-map/
-          CHART_VALUES: ./deploy/helm/test-deploy.yaml
+      
+      - name: Setup Helm
+        uses: azure/setup-helm@v1
+        with:
+          version: v3.2.0
+      
+      - run: yarn helm-lint
+
       - name: Login to GitHub Package Repository
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_ACCESS_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
         run: docker login docker.pkg.github.com -u magdabot -p ${GH_TOKEN}
       - name: Build Docker Image & Push
         run: yarn docker-build-prod --repository=docker.pkg.github.com/magda-io/${REPO_NAME} --name=${REPO_NAME} --version=${GITHUB_SHA}
