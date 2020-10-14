@@ -10,7 +10,6 @@ global:
 
 defaultImage:
   repository: docker.io/data61
-  tag: 0.0.57-0
   pullPolicy: IfNotPresent
   imagePullSecret: false
 
@@ -20,6 +19,9 @@ image:
   # tag:
   # pullPolicy:
   # imagePullSecret:
+
+# -- no. of initial replicas of the deployment
+replicas: 1
 
 autoscaler:
   enabled: false
