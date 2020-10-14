@@ -26,11 +26,12 @@ jobs:
         with:
           version: v3.2.0
 
-      - run: yarn helm-lint
+      - name: helm-check
+        run: yarn helm-lint
 
       - name: Login to GitHub Package Repository
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_ACCESS_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
         run: docker login docker.pkg.github.com -u magdabot -p ${GH_TOKEN}
 
       - name: Build Docker Image & Push to Github Registry
@@ -48,13 +49,12 @@ jobs:
         run: |
           git config user.name "$GITHUB_ACTOR"
           git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
-
       - name: Setup AWS CLi Tools
         uses: chrislennon/action-aws-cli@v1.1
 
       - name: Release Helm Chart
         env:
-          CR_TOKEN: "${{ secrets.GITHUB_ACCESS_TOKEN }}"
+          CR_TOKEN: "${{ secrets.GH_ACCESS_TOKEN }}"
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         run: |
