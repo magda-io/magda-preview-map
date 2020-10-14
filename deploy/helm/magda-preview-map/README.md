@@ -28,6 +28,7 @@ Kubernetes: `>= 1.14.0-0`
 | global.image | object | `{}` |  |
 | global.rollingUpdate | object | `{}` |  |
 | image.name | string | `"magda-preview-map"` |  |
+| replicas | int | `1` | no. of initial replicas of the deployment |
 | resources.limits.cpu | string | `"250m"` |  |
 | resources.requests.cpu | string | `"50m"` |  |
 | resources.requests.memory | string | `"200Mi"` |  |

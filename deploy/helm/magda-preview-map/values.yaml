@@ -20,6 +20,9 @@ image:
   # pullPolicy:
   # imagePullSecret:
 
+# -- no. of initial replicas of the deployment
+replicas: 1
+
 autoscaler:
   enabled: false
   minReplicas: 1
