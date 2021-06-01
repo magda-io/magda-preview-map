@@ -29,7 +29,8 @@
     }
   },
   "devDependencies": {
-    "@magda/scripts": "^0.0.57",
+    "@magda/ci-utils": "^1.0.2",
+    "@magda/docker-utils": "^0.0.60-alpha.10",
     "babel-core": "^6.7.4",
     "babel-eslint": "^7.0.0",
     "babel-loader": "^7.0.0",

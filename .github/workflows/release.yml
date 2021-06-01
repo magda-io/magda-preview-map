@@ -5,7 +5,17 @@ on:
     types: [published]
 
 env:
+  # [avoid issue when Github action upgraded from 18.04 default to 20.04](https://github.com/aws/aws-cli/issues/5262)
+  AWS_EC2_METADATA_DISABLED: true
   REPO_NAME: magda-preview-map
+  # Github account username (used for access github registry)
+  GH_USERNAME: magdabot
+  # Github Orgnisation name or user name for this repo
+  GH_ORGNAME: magda-io
+  #Docker Hub username
+  DH_USERNAME: magdabot
+  #S3 bucket name: this s3 bucket will be used to store published helm chart and index
+  S3_BUCKET: magda-charts
 
 jobs:
   release-helm-chart:
@@ -20,37 +30,34 @@ jobs:
           node-version: 10
       - run: yarn install
       - run: yarn build
-      
-      - name: Setup Helm
-        uses: azure/setup-helm@v1
-        with:
-          version: v3.2.0
+    
 
       - name: helm-check
         run: yarn helm-lint
 
+      - name: check-helm-chart-verion
+        run: yarn check-helm-chart-version deploy/helm/${REPO_NAME}/Chart.yaml
+
       - name: Login to GitHub Package Repository
         env:
           GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
-        run: docker login docker.pkg.github.com -u magdabot -p ${GH_TOKEN}
+        run: docker login docker.pkg.github.com -u ${GH_USERNAME} -p ${GH_TOKEN}
 
       - name: Build Docker Image & Push to Github Registry
-        run: yarn docker-build-prod --repository=docker.pkg.github.com/magda-io/${REPO_NAME} --name=${REPO_NAME}
+        run: yarn docker-build-prod --repository=docker.pkg.github.com/${GH_ORGNAME}/${REPO_NAME} --name=${REPO_NAME}
 
       - name: Login to Docker Hub
         env:
           DH_TOKEN: ${{ secrets.DOCKER_HUB_PASSWORD }}
-        run: docker login -u magdabot -p ${DH_TOKEN}
+        run: docker login -u ${DH_USERNAME} -p ${DH_TOKEN}
 
       - name: Re-tag & Push Docker Image to Docker Hub
-        run: yarn retag-and-push --fromPrefix=docker.pkg.github.com/magda-io/${REPO_NAME}/ --fromName=${REPO_NAME}
+        run: yarn retag-and-push --fromPrefix=docker.pkg.github.com/${GH_ORGNAME}/${REPO_NAME}/ --fromName=${REPO_NAME}
 
       - name: Configure Git
         run: |
           git config user.name "$GITHUB_ACTOR"
           git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
-      - name: Setup AWS CLi Tools
-        uses: chrislennon/action-aws-cli@v1.1
 
       - name: Release Helm Chart
         env:
@@ -58,12 +65,12 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         run: |
-          cd deploy/helm
+          cd deploy
           mkdir -p sync_dir
           mkdir -p index_dir
-          if ! aws s3 cp s3://magda-charts/index.yaml index_dir/index.yaml; then echo "failed to copy current repo index" && exit 1; fi
+          if ! aws s3 cp s3://${S3_BUCKET}/index.yaml index_dir/index.yaml; then echo "failed to copy current repo index" && exit 1; fi
           helm package -d sync_dir ${REPO_NAME}
           helm repo index --merge "index_dir/index.yaml" sync_dir
           mv -f sync_dir/index.yaml index_dir/index.yaml
-          aws s3 sync sync_dir s3://magda-charts/ --acl public-read
-          aws s3 cp index_dir/index.yaml s3://magda-charts/index.yaml --acl public-read
+          aws s3 sync sync_dir s3://${S3_BUCKET}/
+          aws s3 cp index_dir/index.yaml s3://${S3_BUCKET}/index.yaml
