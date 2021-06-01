@@ -3,7 +3,9 @@ kind: Deployment
 metadata:
   name: preview-map
 spec:
+  {{- if .Values.autoscaler.enabled }}
   replicas: {{ .Values.replicas | default 1 }}
+  {{- end }}
   strategy:
     rollingUpdate:
       maxUnavailable: {{ .Values.global.rollingUpdate.maxUnavailable | default 0 }}
@@ -12,6 +14,8 @@ spec:
       service: preview-map
   template:
     metadata:
+      annotations:
+        checksum/serverConfig: {{ .Values.serverConfig | mustToRawJson | sha256sum }}
       labels:
         service: preview-map
     spec:
@@ -38,3 +42,15 @@ spec:
           value: production
         image: "{{ .Values.image.repository | default .Values.global.image.repository | default .Values.defaultImage.repository }}/{{ .Values.image.name }}:{{ .Values.image.tag | default .Values.global.image.tag | default .Chart.Version }}"
         imagePullPolicy: {{ .Values.image.pullPolicy | default .Values.global.image.pullPolicy }}
+        command: 
+          - "node",
+          - "node_modules/terriajs-server/lib/app.js"
+          - "--config-file"
+          - "/etc/config/serverConfig.json"
+        volumeMounts:
+          - name: server-config
+            mountPath: /etc/config
+      volumes:
+        - name: server-config
+          configMap:
+            name: magda-map-preview-config
