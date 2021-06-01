@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: "magda-map-preview-config"
+data:
+  serverConfig.json: {{ .Values.serverConfig | mustToRawJson | quote }}
+
