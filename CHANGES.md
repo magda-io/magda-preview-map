@@ -4,8 +4,8 @@
 
 ## 1.0.1
 - improve ci scripts & setup helm-docs
-- make preview map support format string: "ESRI MapServer" & "ESRI FeatureServer"
-- allow MagdaCatalogItem select wms layer by name (by "selectedWmsLayerName")
+- #12 make preview map support format string: "ESRI MapServer" & "ESRI FeatureServer"
+- #11 allow MagdaCatalogItem select wms layer by name (by "selectedWmsLayerName")
 ## 1.0.0
 - Allow proxy hosts list configurable via helm chart
 - Auto roll deployment when configMap data changes
