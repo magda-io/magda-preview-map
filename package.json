@@ -101,5 +101,9 @@
     "categories": {
       "map": true
     }
-  }
+  },
+  "versionUpdateExclude": [
+    "terria",
+    "terriamap"
+  ]
 }
