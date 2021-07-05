@@ -89,6 +89,11 @@
     "compile": "gulp release",
     "build": "yarn run gulp release",
     "dev": "yarn start && gulp watch",
+    "helm-docs": "helm-docs -t ./README.md.gotmpl -o ../../../README.md",
+    "update-all-charts": "helm dep up ./deploy/helm/magda-preview-map",
+    "add-all-chart-version-changes": "git ls-files -m | grep Chart.yaml | xargs git add && git ls-files -m | grep Chart.lock | xargs git add",
+    "add-all-helm-docs-changes": "yarn helm-docs && git ls-files -m | grep -i readme.md | xargs git add",
+    "version": "yarn update-helm-chart-version && yarn update-all-charts && yarn add-all-chart-version-changes && yarn add-all-helm-docs-changes",
     "helm-lint": "helm lint deploy/helm/magda-preview-map -f deploy/helm/test-deploy.yaml"
   },
   "magda": {
