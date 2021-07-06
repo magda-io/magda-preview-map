@@ -7,6 +7,7 @@
 - #12 make preview map support format string: "ESRI MapServer" & "ESRI FeatureServer"
 - #11 allow MagdaCatalogItem select wms layer by name (by "selectedWmsLayerName")
 - #14 Send Error Message back via postMessage in MagdaCatalogItem
+- Turned on ESRI Feature Server Support
 
 ## 1.0.0
 - Allow proxy hosts list configurable via helm chart
