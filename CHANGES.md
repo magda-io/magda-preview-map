@@ -8,6 +8,7 @@
 - #11 allow MagdaCatalogItem select wms layer by name (by "selectedWmsLayerName")
 - #14 Send Error Message back via postMessage in MagdaCatalogItem
 - Turned on ESRI Feature Server Support
+- #15 Support Select FeatureType for WFS
 
 ## 1.0.0
 - Allow proxy hosts list configurable via helm chart
