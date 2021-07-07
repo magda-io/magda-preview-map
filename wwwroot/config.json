@@ -31,7 +31,7 @@
             ""
         ],
         // Shown when things go wrong.
-        supportEmail: "data@digital.gov.au",
+        supportEmail: "contact@magda.io",
         // You probably shouldn't change this.
         proj4ServiceBaseUrl: "proj4def/",
 
