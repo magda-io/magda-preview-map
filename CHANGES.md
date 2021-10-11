@@ -4,6 +4,7 @@
 
 ## 1.1.0
 - Related to https://github.com/magda-io/magda/issues/3229, Use magda-common for docker image related logic
+- Fixed: Should not set `replicas` when `autoscaler` is enabled
 
 ## 1.0.1
 - improve ci scripts & setup helm-docs

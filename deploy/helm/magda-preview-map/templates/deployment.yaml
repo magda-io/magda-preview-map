@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: preview-map
 spec:
-  {{- if .Values.autoscaler.enabled }}
+  {{- if empty .Values.autoscaler.enabled }}
   replicas: {{ .Values.replicas | default 1 }}
   {{- end }}
   strategy:
