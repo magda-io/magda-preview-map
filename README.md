@@ -1,6 +1,6 @@
 # magda-preview-map
 
-![Version: 1.0.1](https://img.shields.io/badge/Version-1.0.1-informational?style=flat-square)
+![Version: 1.1.0](https://img.shields.io/badge/Version-1.1.0-informational?style=flat-square)
 
 A Helm chart for Magda Preview Map module - forked from Terria Map Repo
 
@@ -15,6 +15,10 @@ See the [TerriaJS README](https://github.com/TerriaJS/TerriaJS) or [TerriaMap Re
 ## Requirements
 
 Kubernetes: `>= 1.14.0-0`
+
+| Repository | Name | Version |
+|------------|------|---------|
+| https://charts.magda.io | magda-common | 1.0.0-alpha.4 |
 
 ## Values
 
