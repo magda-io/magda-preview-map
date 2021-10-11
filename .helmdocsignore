@@ -1,2 +1,2 @@
 deploy/helm/terria
-deploy/**/charts
+deploy/helm/magda-preview-map/charts
