@@ -10,10 +10,10 @@
     core-js-pure "^3.0.0"
     regenerator-runtime "^0.13.4"
 
-"@magda/ci-utils@^1.0.2":
-  version "1.0.2"
-  resolved "https://registry.yarnpkg.com/@magda/ci-utils/-/ci-utils-1.0.2.tgz#cf5383611a0a46f1dc7bac256e08a00f3d4c4974"
-  integrity sha512-oJ7LMNCAqG+zbwGM8RPhTepStK8HZqtF4bUWFsCqtaLnRFMKLjbM5qzWj7q/qtzLvIGAtpc45F/hoL0bszDNQQ==
+"@magda/ci-utils@^1.0.5":
+  version "1.0.5"
+  resolved "https://registry.yarnpkg.com/@magda/ci-utils/-/ci-utils-1.0.5.tgz#29e507fdf5e71c5b62d7cdc665ce5e508ff3f31d"
+  integrity sha512-5DkK6nkXld/UDULe7hb+ABy4co6OPajhXwfG9buh2i6IgcqmNIk2Hz0TDYc/zBdfHFXUgCIAbB29wQcQNMRwWA==
   dependencies:
     fs-extra "^9.1.0"
     recursive-readdir "^2.2.2"
