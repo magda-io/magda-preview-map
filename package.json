@@ -29,7 +29,7 @@
     }
   },
   "devDependencies": {
-    "@magda/ci-utils": "^1.0.2",
+    "@magda/ci-utils": "^1.0.5",
     "@magda/docker-utils": "^0.0.60-alpha.10",
     "babel-core": "^6.7.4",
     "babel-eslint": "^7.0.0",
@@ -89,7 +89,7 @@
     "compile": "gulp release",
     "build": "yarn run gulp release",
     "dev": "yarn start && gulp watch",
-    "helm-docs": "helm-docs -t ./README.md.gotmpl -o ../../../README.md",
+    "helm-docs": "docker run --rm -v \"$(pwd):/helm-docs\" -u $(id -u) jnorwood/helm-docs:v1.11.0 -t ./README.md.gotmpl -o ../../../README.md",
     "update-all-charts": "helm dep up ./deploy/helm/magda-preview-map",
     "add-all-chart-version-changes": "git ls-files -m | grep Chart.yaml | xargs git add && git ls-files -m | grep Chart.lock | xargs git add",
     "add-all-helm-docs-changes": "yarn helm-docs && git ls-files -m | grep -i readme.md | xargs git add",
