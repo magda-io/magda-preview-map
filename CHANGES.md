@@ -2,6 +2,10 @@
 
 > The repo was part of [magda main repo](https://github.com/magda-io/magda). For history before v0.0.58, please check [CHANGES.md of main repo](https://github.com/magda-io/magda/blob/master/CHANGES.md).
 
+## 1.1.1
+
+- Related to https://github.com/magda-io/magda/issues/3458, add better WMS / WFS sub layer / typeName support. 
+
 ## 1.1.0
 - Related to https://github.com/magda-io/magda/issues/3229, Use magda-common for docker image related logic
 - Fixed: Should not set `replicas` when `autoscaler` is enabled
