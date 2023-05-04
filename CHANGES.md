@@ -6,6 +6,7 @@
 
 - fix broken icon links
 - remove unnecessary inline JS code
+- clean-up default configs
 
 ## 1.1.1
 
