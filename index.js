@@ -1,5 +1,7 @@
 'use strict';
 
+window.L_PREFER_CANVAS = true;
+
 /*global require,window */
 
 var terriaOptions = {
