@@ -5,7 +5,7 @@
 ## 1.1.2
 
 - fix broken icon links
-- add default CSP
+- remove unnecessary inline JS code
 
 ## 1.1.1
 
