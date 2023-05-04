@@ -2,6 +2,12 @@
 
 > The repo was part of [magda main repo](https://github.com/magda-io/magda). For history before v0.0.58, please check [CHANGES.md of main repo](https://github.com/magda-io/magda/blob/master/CHANGES.md).
 
+## 1.1.2
+
+- fix broken icon links
+- remove unnecessary inline JS code
+- clean-up default configs
+
 ## 1.1.1
 
 - Related to https://github.com/magda-io/magda/issues/3458, add better WMS / WFS sub layer / typeName support. 
