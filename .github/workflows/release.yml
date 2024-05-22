@@ -43,7 +43,7 @@ jobs:
       - name: helm-check
         run: yarn helm-lint
 
-        - name: Check Helm Chart Document
+      - name: Check Helm Chart Document
         run: |
           code=0
           docker run --rm -v "$(pwd):/helm-docs" -u $(id -u) jnorwood/helm-docs:v1.11.0 -t ./README.md.gotmpl -o ../../README.md || code=$?;
