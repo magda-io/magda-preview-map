@@ -28,6 +28,12 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: 10
+      
+      - name: Login to GitHub Container Registry
+        run: |
+          REPO_OWNER=`echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]'`
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      
       - run: yarn install
       - run: yarn build
 
@@ -37,42 +43,54 @@ jobs:
       - name: helm-check
         run: yarn helm-lint
 
+        - name: Check Helm Chart Document
+        run: |
+          code=0
+          docker run --rm -v "$(pwd):/helm-docs" -u $(id -u) jnorwood/helm-docs:v1.11.0 -t ./README.md.gotmpl -o ../../README.md || code=$?;
+          if [ "$code" != "0" ]; then 
+            echo "Failed to run helm-docs!";
+            exit 1;
+          fi;
+          cd deploy
+          code=0
+          git ls-files -m | grep -i readme.md || code=$?;
+          if [ "$code" == "0" ]; then
+            echo -e "Some of helm chart docs are required to be updated using the [helm-docs](https://github.com/norwoodj/helm-docs) tool. \n
+            Please run helm-docs (v1.11.0) at project root, review & commit docs changes and push a new commit.";
+            exit 1;
+          else 
+            echo -e "helm docs check passed. helm docs update is not required.";
+          fi;
+      
       - name: check-helm-chart-verion
         run: yarn check-helm-chart-version deploy/helm/${REPO_NAME}/Chart.yaml
 
-      - name: Login to GitHub Package Repository
-        env:
-          GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
-        run: docker login docker.pkg.github.com -u ${GH_USERNAME} -p ${GH_TOKEN}
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+  
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
 
-      - name: Build Docker Image & Push to Github Registry
-        run: yarn docker-build-prod --repository=docker.pkg.github.com/${GH_ORGNAME}/${REPO_NAME} --name=${REPO_NAME}
-
-      - name: Login to Docker Hub
-        env:
-          DH_TOKEN: ${{ secrets.DOCKER_HUB_PASSWORD }}
-        run: docker login -u ${DH_USERNAME} -p ${DH_TOKEN}
-
-      - name: Re-tag & Push Docker Image to Docker Hub
-        run: yarn retag-and-push --fromPrefix=docker.pkg.github.com/${GH_ORGNAME}/${REPO_NAME}/ --fromName=${REPO_NAME}
-
-      - name: Configure Git
+      - name: Build Docker Image & Push
         run: |
-          git config user.name "$GITHUB_ACTOR"
-          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+          REPO_OWNER=`echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]'`
+          yarn docker-build-prod --repository=ghcr.io/${REPO_OWNER} --name=${REPO_NAME} --version=${GITHUB_SHA} --platform=linux/amd64,linux/arm64
+
+      - name: Re-tag & Push Docker Images
+        run: |
+          REPO_OWNER=`echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]'`
+          PACKAGE_JSON_VERSION=$(jq -r ".version" ./package.json)
+          chmod +r $HOME/.docker/config.json
+          # Re-push to ghcr.io
+          docker container run --rm --net host \
+            -v regctl-conf:/home/appuser/.regctl/ \
+            -v $HOME/.docker/config.json:/home/appuser/.docker/config.json \
+            regclient/regctl:v0.3.9 image copy ghcr.io/${REPO_OWNER}/${REPO_NAME}:${GITHUB_SHA} ghcr.io/${REPO_OWNER}/${REPO_NAME}:${PACKAGE_JSON_VERSION}
 
       - name: Release Helm Chart
-        env:
-          CR_TOKEN: "${{ secrets.GH_ACCESS_TOKEN }}"
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         run: |
+          REPO_OWNER=`echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]'`
           cd deploy/helm
-          mkdir -p sync_dir
-          mkdir -p index_dir
-          if ! aws s3 cp s3://${S3_BUCKET}/index.yaml index_dir/index.yaml; then echo "failed to copy current repo index" && exit 1; fi
-          helm package -d sync_dir ${REPO_NAME}
-          helm repo index --merge "index_dir/index.yaml" sync_dir
-          mv -f sync_dir/index.yaml index_dir/index.yaml
-          aws s3 sync sync_dir s3://${S3_BUCKET}/
-          aws s3 cp index_dir/index.yaml s3://${S3_BUCKET}/index.yaml
+          helm package ${REPO_NAME}
+          PKG_NAME=`ls *.tgz`
+          helm push ${PKG_NAME} oci://ghcr.io/${REPO_OWNER}/charts

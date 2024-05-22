@@ -16,6 +16,12 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: 10
+
+      - name: Login to GitHub Container Registry
+        run: |
+          REPO_OWNER=`echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]'`
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
       - run: yarn install
       - run: yarn build
 
@@ -24,12 +30,35 @@ jobs:
       
       - run: yarn helm-lint
 
-      - name: Login to GitHub Package Repository
-        env:
-          GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
-        run: docker login docker.pkg.github.com -u magdabot -p ${GH_TOKEN}
+      - name: Check Helm Chart Document
+        run: |
+          code=0
+          docker run --rm -v "$(pwd):/helm-docs" -u $(id -u) jnorwood/helm-docs:v1.11.0 -t ./README.md.gotmpl -o ../../README.md || code=$?;
+          if [ "$code" != "0" ]; then 
+            echo "Failed to run helm-docs!";
+            exit 1;
+          fi;
+          cd deploy
+          code=0
+          git ls-files -m | grep -i readme.md || code=$?;
+          if [ "$code" == "0" ]; then
+            echo -e "Some of helm chart docs are required to be updated using the [helm-docs](https://github.com/norwoodj/helm-docs) tool. \n
+            Please run helm-docs (v1.11.0) at project root, review & commit docs changes and push a new commit.";
+            exit 1;
+          else 
+            echo -e "helm docs check passed. helm docs update is not required.";
+          fi;
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+  
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
       - name: Build Docker Image & Push
-        run: yarn docker-build-prod --repository=docker.pkg.github.com/magda-io/${REPO_NAME} --name=${REPO_NAME} --version=${GITHUB_SHA}
+        run: |
+          REPO_OWNER=`echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]'`
+          yarn docker-build-prod --repository=ghcr.io/${REPO_OWNER} --name=${REPO_NAME} --version=${GITHUB_SHA} --platform=linux/amd64,linux/arm64
 
   # build-test-node-12:
   #   name: Build, Test Only with Node 12

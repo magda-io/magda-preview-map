@@ -30,7 +30,7 @@ Kubernetes: `>= 1.14.0-0`
 | autoscaler.targetCPUUtilizationPercentage | int | `80` |  |
 | defaultImage.imagePullSecret | bool | `false` |  |
 | defaultImage.pullPolicy | string | `"IfNotPresent"` |  |
-| defaultImage.repository | string | `"docker.io/data61"` |  |
+| defaultImage.repository | string | `"ghcr.io/magda-io"` |  |
 | global.image | object | `{}` |  |
 | global.rollingUpdate | object | `{}` |  |
 | image.name | string | `"magda-preview-map"` |  |
