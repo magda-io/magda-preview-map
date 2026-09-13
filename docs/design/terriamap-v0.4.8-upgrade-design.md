@@ -6,68 +6,159 @@ Proposed implementation design for upgrading `magda-preview-map` to TerriaMap `v
 
 ## Goal
 
-Upgrade `magda-preview-map` from its current TerriaJS 6-era implementation to TerriaMap `v0.4.8` while keeping existing Magda dataset preview behaviour working for callers that still send the legacy `magda-item` payload.
+Upgrade `magda-preview-map` from its current TerriaJS 6-era implementation to TerriaMap `v0.4.8` while keeping the existing Magda dataset-preview flow working without requiring a coordinated Magda web-client release.
 
-The upgrade should also retire avoidable forked TerriaMap code, adopt current TerriaJS/server/build infrastructure, and use modern TerriaJS behaviour to resolve existing preview issues where possible.
+The upgrade should:
+
+- use TerriaMap `v0.4.8` as the new application/build/runtime foundation;
+- keep Magda-specific behaviour in a small compatibility layer;
+- preserve the existing Magda web-client iframe contract;
+- use modern TerriaJS models for WMS, WFS, Esri and file formats rather than carrying old loader implementations forward;
+- resolve existing WFS / FeatureServer problems where the modern TerriaJS implementation already provides the required behaviour;
+- make the upgraded preview easy to verify end-to-end against the real Magda web client and public datasets from `dev.magda.io`.
 
 ## Non-goals
 
-- Redesign the Magda dataset page or its preview UI.
-- Change the Magda web client contract as a prerequisite for the upgrade.
-- Add advanced visualization capabilities unrelated to preserving current preview behaviour.
-- Migrate all image registries, Helm distribution mechanisms, or other deployment conventions unless required for TerriaMap v0.4.8 compatibility.
-- Preserve the Carto `Positron (Light)` basemap if doing so requires a paid or incompatible licence.
+- Redesign the Magda dataset page or its preview UX.
+- Require a Magda web-client change before the upgraded preview can be deployed.
+- Add advanced visualisation features unrelated to preserving the existing map-preview behaviour.
+- Migrate all image registries, Helm publication mechanisms or other release infrastructure unless required for TerriaMap v0.4.8 compatibility.
+- Preserve Carto `Positron (Light)` as the actual basemap when no appropriate Carto licence is configured.
 
-## Background
+## Relevant repositories and source of truth
 
-`magda-preview-map` is a fork of TerriaMap that currently contains a custom `MagdaCatalogItem` and a simplified embedded map UI. The current repository is based on an old TerriaJS application architecture and build stack.
+There are two codebases involved in the compatibility boundary.
 
-TerriaMap `v0.4.8` uses:
+### Preview application
 
-- TerriaJS `8.13.0`
-- terriajs-server `5.0.0`
-- Node.js 22+
-- React 18
-- Webpack 5
-- modern Sass / TypeScript tooling
+Repository: `magda-io/magda-preview-map`
 
-The existing Magda-specific behaviour was introduced mainly by historical PRs #8 and #13 and remains relied on by the current Magda web client.
+This repository owns:
 
-Relevant existing issues:
+- TerriaMap/TerriaJS application setup;
+- the legacy `magda-item` catalog/reference compatibility layer;
+- Magda Registry / Storage API resolution performed inside the preview;
+- map rendering;
+- iframe lifecycle responses (`"ready"`, `"loading complete"`, error payloads);
+- terriajs-server, Docker and Helm deployment.
 
-- #19 — dependency / TerriaJS upgrade
-- #18 — WFS requests should be bounded by `maxFeatures`
-- #26 — Esri FeatureServer preview currently fails for service-level endpoints
-- #16 / #24 — proxy redirect / crash behaviour in the old terriajs-server generation
+### Magda web-client caller
 
-## Current external compatibility contract
+The authoritative caller is:
 
-The upgrade must initially remain compatible with the existing Magda web client without requiring coordinated deployment.
+`magda-io/magda/magda-web-client/src/Components/Common/DataPreviewMap.tsx`
 
-The parent page currently embeds the preview map and sends Terria start data containing a catalog item similar to:
+This file should be reviewed whenever the preview contract changes. It currently owns:
+
+- choosing the preferred distribution for preview;
+- normalising WMS/WFS capability URLs;
+- fetching WMS/WFS capabilities for the layer/type selector;
+- choosing the initial WMS layer / WFS feature type;
+- constructing the legacy `type: "magda-item"` start payload;
+- creating the preview iframe using `config.previewMapBaseUrl`;
+- waiting for the preview `"ready"` message;
+- posting the Terria init source into the iframe;
+- keeping the parent spinner visible until `"loading complete"` or an error is received;
+- displaying the user-facing preview error state.
+
+For compatibility purposes, this caller is more authoritative than incidental behaviour inside the old `MagdaCatalogItem` implementation.
+
+## Current Magda web-client behaviour
+
+### Distribution preference
+
+By default, `DataPreviewMap.tsx` prefers preview distributions in this order:
+
+1. WMS
+2. Esri MapServer
+3. WFS
+4. Esri FeatureServer
+5. GeoJSON
+6. `csv-geo-au`
+7. KML
+8. KMZ
+
+The list can be overridden by Magda web-client configuration.
+
+This distinction matters for testing: CZML is supported by the old preview implementation, but it is not part of the Magda web client's default preview preference. CZML compatibility can be retained in the adapter where inexpensive, but it is not a mandatory default Magda web-client end-to-end scenario unless the client is configured to select it.
+
+### WMS / WFS selection ownership
+
+For WMS and WFS, the web client fetches capabilities and selects a member before creating the preview payload.
+
+The effective caller-side precedence is:
+
+1. layer/type encoded in the distribution URL;
+2. distribution title if it exactly matches a capability member name;
+3. first capability member.
+
+When a value is selected, it is sent to the preview as:
+
+- `selectedWmsLayerName`; or
+- `selectedWfsFeatureTypeName`.
+
+Therefore the upgraded preview's primary rule is:
+
+> If the caller supplies `selectedWmsLayerName` or `selectedWfsFeatureTypeName`, honour that value exactly.
+
+The preview still needs a safe first-member/default fallback when no selected name is supplied, for example when the web client does not render a selector or another legacy caller sends the same contract directly.
+
+The compatibility adapter should not duplicate caller-side capability-selection logic unnecessarily.
+
+### Actual start payload
+
+`DataPreviewMap.tsx` currently constructs a catalog item equivalent to:
 
 ```json
 {
   "name": "Distribution title",
   "type": "magda-item",
-  "url": "https://magda.example",
-  "storageApiUrl": "https://magda.example/api/v0/storage/",
-  "distributionId": "dist-...",
+  "url": "<config.baseUrl>",
+  "storageApiUrl": "<config.storageApiBaseUrl>",
+  "distributionId": "<distribution identifier>",
   "defaultBucket": "magda-datasets",
   "isEnabled": true,
   "zoomOnEnable": true,
-  "selectedWmsLayerName": "optional-layer",
-  "selectedWfsFeatureTypeName": "optional-feature-type"
+  "selectedWmsLayerName": "<optional selected layer>",
+  "selectedWfsFeatureTypeName": "<optional selected feature type>"
 }
 ```
 
-The preview iframe currently participates in this lifecycle:
+and wraps it in a Terria init source containing:
 
-1. Preview iframe posts `"ready"`.
-2. Parent sends start data.
-3. Preview loads and renders the selected distribution.
-4. Preview posts `"loading complete"` when the selected map item finishes loading.
-5. On failure, preview posts a JSON string with the shape:
+```json
+{
+  "catalog": ["<catalog item above>"],
+  "baseMapName": "Positron (Light)",
+  "homeCamera": {
+    "north": -8,
+    "east": 158,
+    "south": -45,
+    "west": 109
+  },
+  "corsDomains": ["<Magda external hostname>"]
+}
+```
+
+The iframe URL is:
+
+```text
+<config.previewMapBaseUrl>#mode=preview&hideExplorerPanel=1
+```
+
+Phase 1 of the upgrade must accept this payload unchanged.
+
+### Parent/iframe lifecycle
+
+The current lifecycle is:
+
+1. The preview iframe starts and posts `"ready"`.
+2. `DataPreviewMap.tsx` receives `"ready"` from that iframe window.
+3. The parent posts the legacy init source into the iframe.
+4. The parent keeps its spinner visible.
+5. On success, the preview posts `"loading complete"`.
+6. The parent hides the spinner.
+7. On failure, the preview posts a JSON string with the shape:
 
 ```json
 {
@@ -77,17 +168,42 @@ The preview iframe currently participates in this lifecycle:
 }
 ```
 
-This message contract is part of the compatibility boundary and must be covered by automated tests.
+8. The parent marks loading complete and displays its preview error state.
 
-## Existing behaviour to preserve
+The parent currently checks `event.source` against the iframe window. Its outgoing `postMessage` call uses `"*"` as the target origin.
 
-### Magda registry lookup
+The upgraded preview must not rely on the wildcard for inbound trust. TerriaJS 8 origin validation should remain enabled and legitimate parent origins must be explicitly allowed when the embedding is cross-origin.
 
-The preview must continue to support loading either a specific Magda distribution or, where required for backward compatibility, a dataset whose distributions are examined for the first supported preview type.
+## Existing Magda behaviour to preserve
 
-### Supported distribution formats
+### Magda Registry lookup
 
-The compatibility layer must preserve support for the currently previewable formats:
+The preview must continue to load the requested Magda distribution by `distributionId` and retain compatible dataset/distribution lookup behaviour needed by existing legacy inputs.
+
+### Dataset format override
+
+Where both `dcat-distribution-strings.format` and `dataset-format.format` exist, `dataset-format` should continue to take precedence.
+
+### Internal storage URLs
+
+Translate pseudo URLs of the form:
+
+```text
+magda://storage-api/<dataset-id>/<distribution-id>/<file-name>
+```
+
+into the configured Storage API URL.
+
+Accept both:
+
+- `defaultBucket`, which is what the current Magda web client sends; and
+- `datasetBucket`, for backward compatibility with the old preview model.
+
+If neither is supplied, use `magda-datasets`.
+
+### Supported formats
+
+The compatibility layer should retain practical support for:
 
 - WMS
 - WFS
@@ -95,134 +211,76 @@ The compatibility layer must preserve support for the currently previewable form
 - Esri FeatureServer
 - GeoJSON
 - KML / KMZ
-- CSV / geographic CSV
-- CZML where currently supported
+- geographic CSV
+- CZML where already supported and low-cost to retain
 
-The implementation may use newer TerriaJS model types internally.
+Actual Magda web-client default E2E coverage should follow the caller preference list described above.
 
-### Dataset format override
+### Enabled / zoom behaviour
 
-Where a Magda record has both `dcat-distribution-strings.format` and `dataset-format.format`, the `dataset-format` value should continue to take precedence.
-
-### Internal storage URLs
-
-The preview must continue to translate Magda pseudo URLs of the form:
-
-```text
-magda://storage-api/<dataset-id>/<distribution-id>/<file-name>
-```
-
-into a runtime-accessible Storage API URL using the configured storage base URL and bucket.
-
-For backward compatibility, both `datasetBucket` and the currently emitted `defaultBucket` field should be accepted. If neither is provided, the effective default remains `magda-datasets`.
-
-### WMS layer selection
-
-The preview must preserve the following precedence:
-
-1. `selectedWmsLayerName` supplied by the parent.
-2. Layer encoded in the distribution URL.
-3. Matching distribution title/name where practical.
-4. First available WMS layer.
-
-### WFS feature type selection
-
-The preview must preserve equivalent behaviour for WFS:
-
-1. `selectedWfsFeatureTypeName` supplied by the parent.
-2. Feature type encoded in the distribution URL.
-3. Matching distribution title/name where practical.
-4. First available feature type.
-
-### Zoom and map interaction
-
-Legacy `zoomOnEnable` / enabled-item behaviour must result in the preview rendering and zooming to the selected data in a way that is functionally equivalent to the existing preview.
-
-### Embedded preview mode
-
-The current iframe URL uses:
-
-```text
-#mode=preview&hideExplorerPanel=1
-```
-
-This must continue to produce a compact embedded map rather than exposing the full Terria application workflow.
+Legacy `isEnabled: true` and `zoomOnEnable: true` must still result in the selected dataset becoming visible and the map reaching an appropriate view.
 
 ## Architecture
 
-### Principle: new upstream foundation, small Magda compatibility seam
+### Principle: new upstream foundation, thin Magda compatibility seam
 
-The upgrade should start from the TerriaMap `v0.4.8` application/build/runtime structure rather than incrementally modernising the old fork.
+Do not incrementally upgrade the old TerriaJS 6 fork in place.
 
-The desired architecture is:
+Start from TerriaMap `v0.4.8` and add only the Magda-specific compatibility behaviour required by the caller contract.
 
 ```text
-Existing Magda web client
+Magda web client / DataPreviewMap.tsx
         |
-        | legacy `magda-item` start JSON
+        | legacy `magda-item` init source
         v
-Magda preview compatibility adapter
+MagdaPreviewReference compatibility adapter
         |
-        +-- Magda Registry API
-        +-- Storage API URL resolver
-        +-- WMS/WFS legacy selection mapping
-        |
+        +-- Registry lookup
+        +-- dataset-format resolution
+        +-- Storage API URL rewrite
+        +-- legacy selected WMS/WFS traits
+        +-- FeatureServer root-to-layer resolution
         v
 TerriaJS 8 native catalog models
         |
-        +-- WMS
-        +-- WFS
-        +-- Esri MapServer
-        +-- Esri FeatureServer
+        +-- WMS / WFS
+        +-- Esri MapServer / FeatureServer
         +-- GeoJSON
-        +-- KML/KMZ
+        +-- KML / KMZ
         +-- CSV
-        +-- CZML
+        +-- optional retained CZML
         v
 TerriaMap v0.4.8 rendering / interaction
 ```
 
-### Do not port the old `MagdaCatalogItem` literally
+### Local compatibility model
 
-TerriaJS 8 already contains a modern `MagdaReference` implementation and modern native models for the supported map formats. The old `MagdaCatalogItem.js` should not be mechanically translated line-by-line into the new model architecture.
-
-Instead, add a local compatibility model, tentatively named `MagdaPreviewReference`, registered under the legacy type:
+Add a local model, tentatively named `MagdaPreviewReference`, registered as:
 
 ```text
 magda-item
 ```
 
-This model is responsible only for the Magda preview-specific compatibility surface that TerriaJS does not provide directly.
+Responsibilities:
 
-### `MagdaPreviewReference` responsibilities
+1. accept the legacy caller payload;
+2. load the requested Registry record;
+3. resolve relevant distribution metadata and format;
+4. rewrite Magda Storage API pseudo URLs;
+5. map the distribution to a modern TerriaJS model definition;
+6. honour explicit `selectedWmsLayerName` / `selectedWfsFeatureTypeName` values;
+7. apply a safe WMS/WFS fallback when no explicit selection is supplied;
+8. resolve a bare FeatureServer service to a usable layer item;
+9. preserve relevant enabled/zoom traits;
+10. dereference to the native TerriaJS model.
 
-The compatibility model should:
+Do not duplicate the current TerriaJS loaders for WMS, WFS, Esri, GeoJSON, KML or CSV.
 
-1. Accept legacy `magda-item` fields.
-2. Retrieve the requested Magda record from the Registry API.
-3. Resolve dataset/distribution records and format metadata.
-4. Rewrite `magda://storage-api/...` URLs.
-5. Map the selected distribution into a modern TerriaJS model definition.
-6. Translate legacy WMS/WFS layer-selection fields into current TerriaJS traits.
-7. Resolve a service-level Esri FeatureServer URL to a usable layer-level item when necessary.
-8. Apply compatible overrides / item properties where still required.
-9. Return the modern TerriaJS target model through the reference-model mechanism.
-
-It should not duplicate modern WMS, WFS, Esri, GeoJSON, KML, CSV, or CZML loading logic.
-
-### Upstream `MagdaReference`
-
-TerriaJS 8.13 includes `MagdaReference`, but it is deprecated upstream. It can be used as a reference for registry behaviour and format mapping, but the preview should avoid tightly coupling its long-term compatibility contract to that deprecated model.
-
-Reusable logic should be kept local and narrow enough that replacing upstream `MagdaReference` later does not require another application-wide migration.
+TerriaJS 8.13 contains an upstream `MagdaReference`, but it is deprecated. Its implementation may inform registry/format behaviour, but the preview should not make that deprecated type its long-term external compatibility contract.
 
 ## Esri FeatureServer handling
 
-Issue #26 documents a current bug where a service-level FeatureServer URL is queried through an obsolete service-level path and then parsed incorrectly.
-
-Modern TerriaJS has a native `esri-featureServer` item that supports layer-level loading and pagination.
-
-The compatibility adapter should implement these cases:
+Issue #26 documents the current service-root failure.
 
 ### Explicit layer URL
 
@@ -232,7 +290,7 @@ For:
 .../FeatureServer/3
 ```
 
-create a modern `esri-featureServer` model directly using that URL.
+preserve the layer ID and create/use a modern FeatureServer item directly.
 
 ### Service root URL
 
@@ -242,89 +300,94 @@ For:
 .../FeatureServer
 ```
 
-load the service metadata and choose an appropriate layer. For compatibility with the current preview behaviour, defaulting to the first previewable layer is acceptable when no more specific selection exists.
+load service metadata and resolve a previewable layer. Selecting the first previewable layer is acceptable when the caller has provided no more specific layer selection.
 
-The adapter must not strip an explicitly supplied layer ID.
-
-Issue #26 should become a regression/acceptance test for this work.
+Use modern TerriaJS FeatureServer models and pagination rather than the old service-level GeoJSON path.
 
 ## WFS request limits
 
-Modern TerriaJS already applies a bounded `maxFeatures` value to WFS GetFeature requests. The upgrade should rely on the modern implementation rather than carry a local patch.
+Modern TerriaJS provides bounded WFS requests using `maxFeatures`.
 
-Issue #18 should become an acceptance test verifying that a historically problematic WFS endpoint no longer triggers an unbounded multi-gigabyte request.
+Do not retain a local implementation solely to work around issue #18. Instead, make #18 a regression test confirming the upgraded preview no longer initiates an unbounded multi-gigabyte WFS download.
 
 ## Iframe lifecycle bridge
 
-The old code used Knockout subscriptions on the created catalog item's loading state to notify the parent.
+Implement a small preview-specific bridge around the modern TerriaJS loading state.
 
-In TerriaJS 8, introduce a small preview-specific lifecycle bridge that observes the final dereferenced target / workbench item and sends:
+It must send:
 
-- `"loading complete"` after the selected map item has completed the relevant metadata/map-item loading; or
-- the legacy JSON error message if loading fails.
+- `"loading complete"` when the final selected/dereferenced map item has completed the relevant loading; or
+- the legacy JSON error payload when the preview cannot load the item.
 
-Do not send `"loading complete"` merely because Terria application bootstrap is complete.
+Do not treat Terria application bootstrap completion as dataset loading completion.
 
-The parent-side spinner behaviour is part of the acceptance criteria.
+This behaviour is critical because `DataPreviewMap.tsx` keeps the parent spinner visible until one of those two terminal messages arrives.
 
-## Parent-window origin security
+## Parent-message security
 
-Modern TerriaJS validates messages received by `updateApplicationOnMessageFromParentWindow`.
+TerriaJS 8 validates messages accepted by `updateApplicationOnMessageFromParentWindow`.
 
-Same-origin parents are allowed automatically. Cross-origin embedders must be listed in:
+Same-origin parents are allowed automatically. Cross-origin parents must be configured using:
 
 ```text
 parameters.parentMessageAllowedOrigins
 ```
 
-The Helm chart must expose a client configuration value for this list so deployments with the Magda web client and preview map on different origins can explicitly permit the parent origin.
+Expose that through Helm/client configuration.
 
-Tests must cover:
+Important for local development: different localhost ports are different origins. If the Magda web client and `magda-preview-map` run on separate local ports, the preview's local configuration must explicitly allow the Magda web-client origin unless a local reverse proxy makes them same-origin.
 
-- same-origin iframe communication;
-- configured cross-origin iframe communication;
-- rejection of an unconfigured cross-origin sender.
+Tests should cover:
 
-Do not restore wildcard inbound trust as a compatibility workaround.
+- same-origin embedding;
+- configured cross-origin embedding;
+- rejected unconfigured cross-origin messages.
+
+A future Magda web-client hardening change may replace its outgoing `postMessage(..., "*")` target with the actual preview origin, but that is not required for this preview-map upgrade and must not become a deployment prerequisite.
 
 ## UI migration
 
-The old preview UI imports internal TerriaJS React components directly. These imports should not be ported unchanged.
+Do not port the old preview UI's direct imports of TerriaJS internal React components.
 
-The new UI should build on the `v0.4.8` `StandardUserInterface` / current supported composition points and then hide or omit controls that are unnecessary for an embedded preview.
+Use the `v0.4.8` `StandardUserInterface` / current composition mechanisms, then preserve the compact preview experience exposed by:
 
-Required user-visible behaviour:
+```text
+#mode=preview&hideExplorerPanel=1
+```
 
-- map occupies the preview area;
+Required behaviour:
+
+- map fills the preview area;
 - selected data is visible;
 - zoom controls remain usable;
-- feature picking / feature information remains usable where supported;
-- explorer/workbench UI remains hidden in preview mode;
-- notifications should not obscure the embedded preview unless interaction is required.
+- feature picking/info remains usable where supported;
+- explorer/workbench workflow is hidden;
+- notifications do not unnecessarily obscure the embedded map.
 
 ## Basemap migration
 
-The current Magda parent payload and preview init request `Positron (Light)`.
-
-Current TerriaMap no longer includes the Carto Positron/Dark Matter basemaps by default because they are no longer generally free to use without an appropriate Carto licence.
-
-The upgraded preview should use a genuinely free/default basemap such as OpenStreetMap unless a deployment explicitly configures a licensed alternative.
-
-For rollout compatibility, incoming legacy start data that asks for:
+`DataPreviewMap.tsx` currently hard-codes:
 
 ```text
-Positron (Light)
+baseMapName: "Positron (Light)"
 ```
 
-should not cause the preview to fail. It should fall back to the configured preview default basemap.
+TerriaMap no longer ships Carto Positron/Dark Matter as generally free defaults.
 
-A later Magda web-client change should stop sending the obsolete base-map name.
+For Phase 1 compatibility:
 
-## Server and proxy migration
+- do not require a simultaneous Magda web-client change;
+- treat an incoming `Positron (Light)` request as a legacy alias/fallback request;
+- render the configured free/default basemap, such as OpenStreetMap, when Positron is unavailable;
+- document the licence-driven behaviour change.
 
-Upgrade to terriajs-server `5.0.0` as provided by TerriaMap `v0.4.8`.
+A later Magda web-client cleanup can stop sending the obsolete basemap name.
 
-Keep the existing Helm-facing proxy configuration model where practical:
+## Server and Helm migration
+
+Upgrade to terriajs-server `5.0.0` as used by TerriaMap `v0.4.8`.
+
+Preserve important existing chart behaviour where practical:
 
 ```yaml
 serverConfig:
@@ -333,225 +396,217 @@ serverConfig:
     - ...
 ```
 
-The old proxy implementation has historical redirect/crash issues (#16 / #24). The upgraded server should be tested against representative redirected data URLs and allow-list enforcement.
+Also preserve:
 
-Do not retain the old internal server command path as an intentional API. Prefer the supported TerriaMap/server startup pattern for the selected v0.4.8 foundation.
+- replicas/autoscaler behaviour;
+- resource requests/limits;
+- rolling update on config changes;
+- Magda image repository/name/tag overrides.
 
-## Helm configuration
-
-Preserve existing chart behaviour where practical:
-
-- port `6110`
-- configurable `serverConfig.allowProxyFor`
-- replicas / autoscaler behaviour
-- resource requests/limits
-- rolling deployment on config changes
-- existing Magda image value conventions
-
-Add client-side configuration for at least:
+Add client configuration for parent origins, for example:
 
 ```yaml
 clientConfig:
   parentMessageAllowedOrigins: []
 ```
 
-The Helm templates should render the relevant Terria client configuration without requiring users to modify the image.
+Regression-test historical proxy redirect/crash cases described by #16 and #24.
 
 ## CI / release migration
 
-The current workflow still uses Node 10 and old GitHub Actions versions. Move build validation to the supported Node range for TerriaMap v0.4.8, using Node 22 or 24 as the primary runtime.
+Move from the old Node 10 / legacy Actions workflow to the supported TerriaMap v0.4.8 runtime range.
 
-The CI migration should include:
+Use Node 22+; Node 24 is the preferred production image/runtime unless a discovered compatibility constraint requires otherwise.
 
-- dependency install with lockfile enforcement;
-- lint;
+CI should validate:
+
+- lockfile-based dependency install;
+- lint/type checks;
 - production build;
 - automated compatibility tests;
-- Helm lint/render validation;
+- Helm lint/render;
 - Docker image build.
 
-Keep the existing Helm publication destination and Docker Hub compatibility initially unless there is a separate approved migration for distribution infrastructure.
+Keep current Helm publication / Docker Hub compatibility initially unless separately approved for migration.
 
 ## Testing strategy
 
-### 1. Characterization tests
+The upgrade should use three complementary levels of testing.
 
-Before removing the old model, encode the current external behaviour as tests.
+### 1. Automated compatibility / characterization tests
 
-At minimum include fixtures for:
+Before deleting the old implementation, encode the external contract derived from `DataPreviewMap.tsx` and the existing preview behaviour.
 
-- `magda://storage-api` URL rewriting;
+Cover at minimum:
+
+- legacy `type: "magda-item"` payload;
+- `distributionId` registry lookup;
 - `dataset-format` override;
-- WMS layer from URL;
-- WMS `selectedWmsLayerName`;
-- WMS first-layer fallback;
-- WFS feature type from URL;
-- WFS `selectedWfsFeatureTypeName`;
-- WFS first-type fallback;
+- `magda://storage-api` rewrite;
+- `defaultBucket` and `datasetBucket` compatibility;
+- WMS explicit selected layer;
+- WMS no-explicit-selection fallback;
+- WFS explicit selected feature type;
+- WFS no-explicit-selection fallback;
 - Esri MapServer;
-- Esri FeatureServer explicit layer URL;
+- Esri FeatureServer explicit layer;
 - GeoJSON;
-- KML;
-- KMZ;
-- CSV;
+- KML/KMZ;
+- geographic CSV;
 - unsupported format;
 - registry/network error.
 
-### 2. Iframe integration tests
+CZML can have adapter-level coverage if retained, but it is not required in the default Magda web-client E2E matrix.
 
-Create a minimal parent-page harness that behaves like the Magda web client:
+### 2. Minimal iframe protocol harness
 
-1. load the preview iframe;
+Keep an automated lightweight parent harness that mirrors the important `DataPreviewMap.tsx` protocol:
+
+1. create iframe with `#mode=preview&hideExplorerPanel=1`;
 2. wait for `"ready"`;
-3. post legacy start data;
-4. assert that the correct distribution is rendered/loaded;
-5. wait for `"loading complete"` or expected error;
-6. verify the parent loading state terminates.
+3. post the same init-source shape produced by `createCatalogItemFromDistribution`;
+4. wait for `"loading complete"` or the JSON error payload;
+5. verify parent loading state terminates.
 
-### 3. Existing bug regressions
+This gives stable CI coverage without requiring the full Magda monorepo.
 
-Include coverage for:
+### 3. Real Magda web-client end-to-end test
 
-- #18 large WFS endpoint is bounded;
-- #26 FeatureServer service/layer handling;
-- redirected proxied resource behaviour related to #16;
-- proxy process remains healthy for error/redirect cases related to #24.
+Before considering the migration complete, run the real Magda web client locally against the candidate `magda-preview-map`.
 
-### 4. Deployment tests
+Magda's documented frontend development flow is:
 
-Validate:
+```bash
+# from the magda repository root
+yarn install
+cd magda-web-client
+yarn run dev
+```
 
-- Docker image starts under the supported Node version;
-- server listens on configured port;
-- Helm chart renders with defaults;
-- custom `allowProxyFor` values are propagated;
-- `parentMessageAllowedOrigins` is propagated;
-- liveness probe succeeds;
-- existing image/tag overrides still render correctly.
+By default the local web client connects to:
+
+```text
+https://dev.magda.io/api
+```
+
+This gives the local UI access to the public datasets available from `dev.magda.io`, making it a practical manual/integration test environment without running the full Magda backend locally.
+
+Configure the local web client so `config.previewMapBaseUrl` points to the locally running candidate preview map. If the two applications use different origins/ports, configure the candidate preview's `parentMessageAllowedOrigins` accordingly.
+
+Use representative public `dev.magda.io` datasets for the end-to-end smoke suite. Prefer service distributions or small files so the Magda web client's own file-size warning does not obscure the preview test.
+
+The real-client smoke test should verify:
+
+- dataset page renders the Map Preview section;
+- iframe loads from the candidate preview-map;
+- parent spinner clears;
+- selected WMS/WFS member follows the web-client selector;
+- feature interaction works where appropriate;
+- error state terminates cleanly rather than leaving a permanent spinner.
+
+## Existing bug regressions
+
+Include explicit coverage for:
+
+- #18 — large WFS request is bounded;
+- #26 — FeatureServer service root and explicit layer both work;
+- #16 — redirected proxied resource behaviour;
+- #24 — proxy errors/redirects do not crash the server.
 
 ## Acceptance matrix
 
-The upgrade is considered complete only when all of the following are demonstrated:
-
 | Scenario | Expected result |
 | --- | --- |
-| Existing Magda web client sends `type: magda-item` | Accepted without parent changes |
+| Existing `DataPreviewMap.tsx` sends `type: magda-item` | Accepted unchanged |
+| `defaultBucket` from current Magda caller | Accepted |
+| Legacy `datasetBucket` | Accepted |
 | Internal Storage API distribution | URL rewritten and data loads |
-| WMS explicit selected layer | Requested layer renders |
-| WMS no selected layer | A valid default/first layer renders |
-| WFS explicit selected feature type | Requested type renders |
-| WFS no selected feature type | A valid default/first type renders |
-| Large WFS | Request is bounded; no multi-GB download |
-| Esri MapServer | Renders via modern Terria model |
-| FeatureServer `/FeatureServer/<id>` | Layer ID is preserved and renders |
-| FeatureServer service root | Adapter resolves a usable layer |
+| WMS caller-selected layer | Exact requested layer renders |
+| WMS no selected layer | Valid fallback member renders |
+| WFS caller-selected feature type | Exact requested type renders |
+| WFS no selected type | Valid fallback member renders |
+| Large WFS | Request is bounded |
+| Esri MapServer | Renders through modern model |
+| FeatureServer `/FeatureServer/<id>` | Layer ID preserved and renders |
+| FeatureServer service root | Adapter resolves usable layer |
 | GeoJSON | Renders |
 | KML/KMZ | Renders |
-| CSV geographic data | Renders when supported by current preview rules |
-| Parent receives `ready` | Existing handshake still works |
-| Successful load | Parent receives `loading complete` |
-| Failed load | Parent receives legacy JSON error shape |
+| Geographic CSV | Renders when selected by current preview rules |
+| Parent receives `ready` | Existing handshake works |
+| Successful load | Parent receives `loading complete`; spinner clears |
+| Failed load | Parent receives legacy JSON error; spinner clears |
+| `#mode=preview&hideExplorerPanel=1` | Compact embedded preview |
 | Same-origin embedding | Works |
 | Allowed cross-origin embedding | Works |
 | Unapproved cross-origin embedding | Start data rejected |
-| `hideExplorerPanel=1` | Embedded preview remains compact |
 | Legacy `Positron (Light)` request | Falls back to configured free/default basemap |
-| Helm deployment | Existing important values remain compatible |
+| Real local Magda web client + public `dev.magda.io` dataset | Preview works end-to-end |
+| Helm deployment | Important existing values remain compatible |
 | Proxy redirect/error | Server remains healthy |
 
 ## Delivery plan
 
-### Stage 1 — Characterize the current contract
+### Stage 1 — Characterize the caller contract
 
-Add automated tests and fixtures around the existing parent/preview protocol and Magda-specific model behaviour before changing the TerriaMap foundation.
+Treat `DataPreviewMap.tsx` as the source of truth for the current parent-side protocol and add characterization tests before deleting the old implementation.
 
-Deliverable: a regression suite that can fail against an incomplete v0.4.8 migration.
+Deliverable: automated compatibility suite plus minimal iframe harness.
 
-### Stage 2 — Adopt the TerriaMap v0.4.8 foundation
+### Stage 2 — Adopt TerriaMap v0.4.8 foundation
 
-Replace the obsolete application/build/runtime skeleton with the upstream v0.4.8 equivalent.
+Replace the old TerriaJS 6 application/build structure with the upstream v0.4.8 foundation.
 
-Deliverable: modern TerriaMap shell builds and runs under Node 22/24.
+Deliverable: modern TerriaMap shell builds and runs in preview mode.
 
-### Stage 3 — Add the legacy `magda-item` compatibility adapter
+### Stage 3 — Implement `magda-item` compatibility adapter
 
-Implement `MagdaPreviewReference`, registry lookup, storage URL resolution, distribution mapping, and WMS/WFS compatibility behaviour.
+Implement `MagdaPreviewReference`, Registry/Storage URL handling and modern native model mapping.
 
-Deliverable: non-Esri compatibility scenarios pass against TerriaJS 8 native models.
+Deliverable: non-lifecycle characterization tests pass.
 
-### Stage 4 — Esri and iframe lifecycle
+### Stage 4 — Restore iframe lifecycle and origin handling
 
-Complete MapServer/FeatureServer handling and restore the legacy loading/error parent-window contract.
+Implement modern loading-state observation and secure parent messaging.
 
-Deliverable: #26 regression is fixed and the real Magda-style iframe flow passes end-to-end.
+Deliverable: protocol harness and real parent spinner/error behaviour pass.
 
-### Stage 5 — Server, Helm, and CI migration
+### Stage 5 — Upgrade server/deployment/CI
 
-Upgrade terriajs-server, Docker runtime, Helm config rendering, origin allow-list configuration, and GitHub Actions.
+Move to terriajs-server 5, supported Node, updated Docker/Helm and modern CI.
 
-Deliverable: production-like container/Helm deployment passes regression tests.
+Deliverable: deployable candidate image/chart.
 
-### Stage 6 — Basemap migration and cleanup
+### Stage 6 — Real Magda web-client regression and cleanup
 
-Replace the obsolete Positron default, preserve graceful fallback for legacy start data, remove dead v6-era code/build files, and run the complete acceptance matrix.
+Run the local Magda web client connected to `dev.magda.io`, point it at the candidate preview, execute the representative public-dataset smoke suite, migrate the default basemap behaviour, remove obsolete v6 code and update operator docs.
 
-Deliverable: no dependency on the old TerriaMap fork implementation remains beyond intentional Magda compatibility code and deployment packaging.
+Deliverable: current Magda web client works unchanged against the upgraded preview-map.
 
-## Suggested issue structure
+## Follow-up work after compatibility release
 
-Use #19 as the parent tracking issue and link the implementation issues below:
+Once the upgraded preview has been deployed successfully, consider a separate Magda web-client cleanup to:
 
-1. Characterize legacy Magda preview compatibility contract.
-2. Adopt TerriaMap v0.4.8 application/build foundation.
-3. Implement TerriaJS 8 `magda-item` compatibility adapter.
-4. Restore iframe lifecycle and configure parent-message origin security.
-5. Upgrade terriajs-server, Docker, Helm, and CI/release pipeline.
-6. Migrate the preview basemap and complete final cleanup/regression validation.
+- stop sending `baseMapName: "Positron (Light)"`;
+- use the actual preview origin rather than `"*"` as the outgoing `postMessage` target;
+- potentially move from the legacy `magda-item` contract to a newer explicit contract if doing so materially simplifies both repositories.
 
-Existing issues #18 and #26 should be linked as acceptance work rather than duplicated.
+These are intentionally follow-up changes rather than prerequisites for the v0.4.8 migration.
 
-## Rollout strategy
+## Tracking
 
-The first upgraded release should be deployable without a coordinated Magda web-client release.
+Parent issue: #19
 
-Recommended sequence:
+Implementation issues:
 
-1. deploy upgraded preview-map in a test environment with the existing Magda web client;
-2. run the acceptance matrix against representative public and internal datasets;
-3. canary the preview-map image/chart in a non-production Magda environment;
-4. verify iframe messaging, proxying, storage downloads, and representative data formats;
-5. deploy preview-map production upgrade;
-6. subsequently update the Magda web client to remove legacy `Positron (Light)` and, if desired, move toward a cleaner v8-native start payload;
-7. retain the legacy `magda-item` adapter until all supported Magda deployments have moved off the old contract.
+- #27 — characterize legacy Magda preview compatibility contract
+- #28 — adopt TerriaMap v0.4.8 application/build foundation
+- #29 — implement TerriaJS 8 legacy `magda-item` compatibility adapter
+- #30 — restore iframe lifecycle and parent-message origin security
+- #31 — upgrade terriajs-server, Docker, Helm and CI/release pipeline
+- #32 — migrate preview basemap and complete cleanup/regression validation
 
-## Risks and mitigations
+Existing regression issues:
 
-### Risk: v6-to-v8 behaviour differences are hidden by successful compilation
-
-Mitigation: characterization and iframe E2E tests are a prerequisite, not a final hardening step.
-
-### Risk: modern parent-message origin validation breaks cross-origin deployments
-
-Mitigation: expose `parentMessageAllowedOrigins` through Helm and test representative deployment topology before rollout.
-
-### Risk: upstream `MagdaReference` is deprecated
-
-Mitigation: keep Magda preview compatibility in a local, narrow adapter and rely on stable/native Terria model types for actual rendering.
-
-### Risk: service-level FeatureServer URLs still do not identify a layer
-
-Mitigation: make service-root layer resolution explicit in the adapter and cover it with #26 regression fixtures.
-
-### Risk: basemap behaviour changes visually
-
-Mitigation: document the licence-driven change, provide a deterministic free/default basemap, and make legacy `Positron (Light)` requests fall back rather than fail.
-
-### Risk: simultaneous app and deployment changes make regressions difficult to isolate
-
-Mitigation: keep the upstream foundation, compatibility adapter, iframe behaviour, and deployment migration as separately reviewable issues/PRs.
-
-## Decision summary
-
-The upgrade should be implemented as a **TerriaMap v0.4.8 application with a thin Magda compatibility layer**, not as a continuation of the current TerriaJS 6 fork.
-
-The most important invariant is that the existing Magda web client can continue to send `type: "magda-item"` and receive the same iframe lifecycle messages while the internal rendering path moves to TerriaJS 8 native catalog models.
+- #18 — WFS maxFeatures
+- #26 — Esri FeatureServer preview
+- #16 / #24 — proxy redirect/error behaviour
