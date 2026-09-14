@@ -238,6 +238,13 @@ for (const testCase of fixture.formats) {
         testCase.expectedSelection,
         "an explicit caller-selected WMS/WFS member is authoritative"
       );
+      if (testCase.urlEncodedSelection) {
+        assert.notEqual(
+          result.item[testCase.expectedSelectionProperty],
+          testCase.urlEncodedSelection,
+          "the URL-encoded member must not override the caller selection"
+        );
+      }
     }
     if (testCase.expectedType === "wms" || testCase.expectedType === "wfs") {
       assert.equal(new URL(result.item.url).search, "", "capability query is stripped");

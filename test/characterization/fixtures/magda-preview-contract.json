@@ -64,19 +64,21 @@
   },
   "formats": [
     {
-      "name": "WMS with explicit caller selection",
+      "name": "WMS caller selection overrides URL-encoded layer",
       "format": "WMS",
-      "url": "https://maps.example.test/wms?request=GetCapabilities",
+      "url": "https://maps.example.test/wms?request=GetCapabilities&layers=workspace:url-layer",
       "selectedWmsLayerName": "workspace:exact-layer",
+      "urlEncodedSelection": "workspace:url-layer",
       "expectedType": "wms",
       "expectedSelectionProperty": "layers",
       "expectedSelection": "workspace:exact-layer"
     },
     {
-      "name": "WFS with explicit caller selection",
+      "name": "WFS caller selection overrides URL-encoded feature type",
       "format": "WFS",
-      "url": "https://features.example.test/wfs?request=GetCapabilities",
+      "url": "https://features.example.test/wfs?request=GetCapabilities&typeName=workspace:url-feature-type",
       "selectedWfsFeatureTypeName": "workspace:exact-feature-type",
+      "urlEncodedSelection": "workspace:url-feature-type",
       "expectedType": "wfs",
       "expectedSelectionProperty": "typeNames",
       "expectedSelection": "workspace:exact-feature-type"
