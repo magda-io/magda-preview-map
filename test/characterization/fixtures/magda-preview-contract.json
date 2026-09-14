@@ -1,0 +1,131 @@
+{
+  "caller": {
+    "iframeHash": "#mode=preview&hideExplorerPanel=1",
+    "config": {
+      "baseUrl": "https://catalog.example.test/",
+      "storageApiBaseUrl": "https://catalog.example.test/api/v0/storage/",
+      "baseExternalUrl": "https://catalog.example.test/",
+      "datasetsBucket": "magda-datasets"
+    },
+    "distribution": {
+      "title": "Authoritative selected WMS layer",
+      "identifier": "dist-wms-selected"
+    },
+    "selection": {
+      "name": "workspace:caller-selected-layer",
+      "isWms": true
+    },
+    "startData": {
+      "initSources": [
+        {
+          "catalog": [
+            {
+              "name": "Authoritative selected WMS layer",
+              "type": "magda-item",
+              "url": "https://catalog.example.test/",
+              "storageApiUrl": "https://catalog.example.test/api/v0/storage/",
+              "distributionId": "dist-wms-selected",
+              "defaultBucket": "magda-datasets",
+              "isEnabled": true,
+              "zoomOnEnable": true,
+              "selectedWmsLayerName": "workspace:caller-selected-layer"
+            }
+          ],
+          "baseMapName": "Positron (Light)",
+          "homeCamera": {
+            "north": -8,
+            "east": 158,
+            "south": -45,
+            "west": 109
+          },
+          "corsDomains": ["catalog.example.test"]
+        }
+      ]
+    }
+  },
+  "registry": {
+    "distributionPath": "/api/v0/registry/records/dist-id",
+    "requiredAspect": "dcat-distribution-strings",
+    "optionalAspect": "dataset-format"
+  },
+  "storage": {
+    "pseudoUrl": "magda://storage-api/dataset-id/distribution-id/a%20file.geojson",
+    "storageApiUrl": "https://catalog.example.test/api/v0/storage/",
+    "defaultBucket": "magda-datasets",
+    "defaultBucketResult": "https://catalog.example.test/api/v0/storage/magda-datasets/dataset-id/distribution-id/a%20file.geojson",
+    "callerBucket": "caller-bucket",
+    "callerBucketContractResult": "https://catalog.example.test/api/v0/storage/caller-bucket/dataset-id/distribution-id/a%20file.geojson",
+    "callerBucketLegacyObservedResult": "https://catalog.example.test/api/v0/storage/magda-datasets/dataset-id/distribution-id/a%20file.geojson",
+    "datasetBucket": "legacy-bucket",
+    "datasetBucketResult": "https://catalog.example.test/api/v0/storage/legacy-bucket/dataset-id/distribution-id/a%20file.geojson",
+    "conflictContractResult": "https://catalog.example.test/api/v0/storage/caller-bucket/dataset-id/distribution-id/a%20file.geojson",
+    "conflictLegacyObservedResult": "https://catalog.example.test/api/v0/storage/legacy-bucket/dataset-id/distribution-id/a%20file.geojson",
+    "knownGap": "The TerriaJS 6 model ignores the current caller's defaultBucket field; the TerriaJS 8 adapter must use defaultBucket before datasetBucket."
+  },
+  "formats": [
+    {
+      "name": "WMS with explicit caller selection",
+      "format": "WMS",
+      "url": "https://maps.example.test/wms?request=GetCapabilities",
+      "selectedWmsLayerName": "workspace:exact-layer",
+      "expectedType": "wms",
+      "expectedSelectionProperty": "layers",
+      "expectedSelection": "workspace:exact-layer"
+    },
+    {
+      "name": "WFS with explicit caller selection",
+      "format": "WFS",
+      "url": "https://features.example.test/wfs?request=GetCapabilities",
+      "selectedWfsFeatureTypeName": "workspace:exact-feature-type",
+      "expectedType": "wfs",
+      "expectedSelectionProperty": "typeNames",
+      "expectedSelection": "workspace:exact-feature-type"
+    },
+    {
+      "name": "Esri MapServer",
+      "format": "ESRI MapServer",
+      "url": "https://services.example.test/arcgis/rest/services/example/MapServer",
+      "expectedType": "esri-mapServer"
+    },
+    {
+      "name": "Esri FeatureServer explicit layer",
+      "format": "ESRI FeatureServer",
+      "url": "https://services.example.test/arcgis/rest/services/example/FeatureServer/3",
+      "expectedType": "esri-featureServer"
+    },
+    {
+      "name": "GeoJSON",
+      "format": "GeoJSON",
+      "url": "https://files.example.test/example.geojson",
+      "expectedType": "geojson"
+    },
+    {
+      "name": "KML",
+      "format": "KML",
+      "url": "https://files.example.test/example.kml",
+      "expectedType": "kml"
+    },
+    {
+      "name": "KMZ",
+      "format": "KMZ",
+      "url": "https://files.example.test/example.kmz",
+      "expectedType": "kml"
+    },
+    {
+      "name": "geographic CSV",
+      "format": "csv-geo-au",
+      "url": "https://files.example.test/example.csv",
+      "expectedType": "csv"
+    },
+    {
+      "name": "CZML adapter compatibility",
+      "format": "CZML",
+      "url": "https://files.example.test/example.czml",
+      "expectedType": "czml"
+    }
+  ],
+  "errors": {
+    "unsupportedFormat": "application/pdf",
+    "legacyShape": ["type", "title", "message"]
+  }
+}

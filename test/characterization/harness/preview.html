@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Preview protocol stub</title>
+  </head>
+  <body>
+    <p>Preview protocol stub</p>
+    <script>
+      window.addEventListener("message", (event) => {
+        if (!event.data || !Array.isArray(event.data.initSources)) return;
+        const scenario = new URLSearchParams(window.location.search).get("scenario");
+        if (scenario === "error") {
+          window.parent.postMessage(
+            JSON.stringify({
+              type: "error",
+              title: "Harness load error",
+              message: "The harness requested a failure"
+            }),
+            "*"
+          );
+        } else {
+          window.parent.postMessage("loading complete", "*");
+        }
+      });
+      window.parent.postMessage("ready", "*");
+    </script>
+  </body>
+</html>
