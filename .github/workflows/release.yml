@@ -19,7 +19,11 @@ env:
 
 jobs:
   release-helm-chart:
-    name: Release Helm Chart
+    # Disabled during the staged migration: the existing image is tied to Node
+    # 10 and the removed TerriaJS 6 server entrypoint. Issue #31 replaces this
+    # workflow together with Docker, Helm and terriajs-server v5 deployment.
+    if: ${{ false }}
+    name: Release Helm Chart (disabled until #31)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
