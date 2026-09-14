@@ -7,8 +7,8 @@ import Terria from "terriajs/lib/Models/Terria";
 import ViewState from "terriajs/lib/ReactViewModels/ViewState";
 import registerCustomComponentTypes from "terriajs/lib/ReactViews/Custom/registerCustomComponentTypes";
 import updateApplicationOnHashChange from "terriajs/lib/ViewModels/updateApplicationOnHashChange";
-import updateApplicationOnMessageFromParentWindow from "terriajs/lib/ViewModels/updateApplicationOnMessageFromParentWindow";
 import loadPlugins from "./lib/Core/loadPlugins";
+import configureMagdaPreviewLifecycle from "./lib/Models/MagdaPreviewLifecycle";
 import registerMagdaCatalogMembers from "./lib/Models/registerMagdaCatalogMembers";
 import configurePreviewMode from "./lib/Views/configurePreviewMode";
 import showGlobalDisclaimer from "./lib/Views/showGlobalDisclaimer";
@@ -86,7 +86,7 @@ export default terria
     try {
       // Automatically update Terria (load new catalogs, etc.) when the hash part of the URL changes.
       updateApplicationOnHashChange(terria, window);
-      updateApplicationOnMessageFromParentWindow(terria, window);
+      configureMagdaPreviewLifecycle(terria, window);
 
       // Show a modal disclaimer before user can do anything else.
       if (terria.configParameters.globalDisclaimer) {

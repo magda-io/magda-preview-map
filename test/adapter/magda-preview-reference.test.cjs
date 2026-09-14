@@ -249,5 +249,6 @@ test("legacy enable and zoom fields bridge to the modern workbench", () => {
   );
   assert.match(reference, /this\.terria\.workbench[\s\S]*\.add\(this\)/);
   assert.match(reference, /Promise\.resolve\(\)\.then\(\(\) => this\.updateEnabledState/);
+  assert.match(reference, /resolvedSeverity === TerriaErrorSeverity\.Error/);
   assert.match(reference, /zoomOnAddToWorkbench: this\.zoomOnEnable/);
 });

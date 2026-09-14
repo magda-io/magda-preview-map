@@ -5,6 +5,8 @@
     "googleUrlShortenerKey": null,
     "googleAnalyticsKey": null,
     "googleAnalyticsOptions": null,
+    // Exact cross-origin iframe parent origins. Same-origin parents are always allowed.
+    "parentMessageAllowedOrigins": [],
     // Log ConsoleAnalytics events to console
     // logToConsole: true,
     /* Text that appears at the bottom of the map */

@@ -45,11 +45,11 @@ test("Webpack 5 foundation uses the modern Sass pipeline", () => {
   assert.doesNotMatch(webpack, /extract-text-webpack-plugin/);
 });
 
-test("application keeps the TerriaJS parent-message and hash hooks", () => {
+test("application keeps the hash hook and secure preview lifecycle bridge", () => {
   const application = read("index.js");
 
   assert.match(application, /updateApplicationOnHashChange/);
-  assert.match(application, /updateApplicationOnMessageFromParentWindow/);
+  assert.match(application, /configureMagdaPreviewLifecycle/);
   assert.match(application, /registerCatalogMembers\(\)/);
   assert.match(application, /registerMagdaCatalogMembers\(terria\)/);
   assert.match(application, /beforeRestoreAppState/);
