@@ -1,65 +1,40 @@
-import React from 'react';
-import MapColumn from 'terriajs/lib/ReactViews/StandardUserInterface/MapColumn.jsx';
-import ExplorerWindow from 'terriajs/lib/ReactViews/ExplorerWindow/ExplorerWindow.jsx';
-import FeatureInfoPanel from 'terriajs/lib/ReactViews/FeatureInfo/FeatureInfoPanel.jsx';
-import MapInteractionWindow from 'terriajs/lib/ReactViews/Notification/MapInteractionWindow.jsx';
-import ExperimentalFeatures from 'terriajs/lib/ReactViews/Map/ExperimentalFeatures.jsx';
-import Notification from 'terriajs/lib/ReactViews/Notification/Notification.jsx';
-import ProgressBar from 'terriajs/lib/ReactViews/Map/ProgressBar.jsx';
-import processCustomElements from 'terriajs/lib/ReactViews/StandardUserInterface/processCustomElements';
-import ZoomControl from 'terriajs/lib/ReactViews/Map/Navigation/ZoomControl.jsx';
-import Styles from 'terriajs/lib/ReactViews/StandardUserInterface/standard-user-interface.scss';
-import MapNavigationStyles from 'terriajs/lib/ReactViews/Map/map-navigation.scss';
+import PropTypes from "prop-types";
+import RelatedMaps from "terriajs/lib/ReactViews/RelatedMaps/RelatedMaps";
+import { MenuLeft } from "terriajs/lib/ReactViews/StandardUserInterface/customizable/Groups";
+import MenuItem from "terriajs/lib/ReactViews/StandardUserInterface/customizable/MenuItem";
+import StandardUserInterface from "terriajs/lib/ReactViews/StandardUserInterface/StandardUserInterface";
+import version from "../../version";
 
-import './global.scss';
+export const TerriaUserInterface = ({ terria, viewState, themeOverrides }) => {
+  const relatedMaps = viewState.terria.configParameters.relatedMaps;
+  const aboutButtonHrefUrl =
+    viewState.terria.configParameters.aboutButtonHrefUrl;
 
-export default function UserInterface(props) {
-    const customElements = processCustomElements(
-        props.viewState.useSmallScreenInterface
-    );
-    const terria = props.terria;
-    const allBaseMaps = props.allBaseMaps;
-    return (
-        <div className={Styles.uiRoot}>
-            <div className={Styles.ui}>
-                <section className={Styles.map} style={{ top: '0px' }}>
-                    <ProgressBar terria={terria} />
-                    <MapColumn terria={terria} viewState={props.viewState} />
-                    <main>
-                        <ExplorerWindow
-                            terria={terria}
-                            viewState={props.viewState}
-                        />
-                        <If
-                            condition={
-                                props.terria.configParameters
-                                    .experimentalFeatures &&
-                                !props.viewState.hideMapUi()
-                            }
-                        >
-                            <ExperimentalFeatures
-                                terria={terria}
-                                viewState={props.viewState}
-                                experimentalItems={
-                                    customElements.experimentalMenu
-                                }
-                            />
-                        </If>
-                    </main>
-                </section>
-            </div>
+  return (
+    <StandardUserInterface
+      terria={terria}
+      viewState={viewState}
+      themeOverrides={themeOverrides}
+      version={version}
+    >
+      <MenuLeft>
+        {aboutButtonHrefUrl ? (
+          <MenuItem
+            caption="About"
+            href={aboutButtonHrefUrl}
+            key="about-link"
+          />
+        ) : null}
+        {relatedMaps && relatedMaps.length > 0 ? (
+          <RelatedMaps relatedMaps={relatedMaps} />
+        ) : null}
+      </MenuLeft>
+    </StandardUserInterface>
+  );
+};
 
-            <Notification viewState={props.viewState} />
-            <MapInteractionWindow terria={terria} viewState={props.viewState} />
-
-            <div className={Styles.featureInfo}>
-                <FeatureInfoPanel terria={terria} viewState={props.viewState} />
-            </div>
-            <div className={MapNavigationStyles.mapNavigation}>
-                <div className={MapNavigationStyles.control}>
-                    <ZoomControl terria={props.terria} />
-                </div>
-            </div>
-        </div>
-    );
-}
+TerriaUserInterface.propTypes = {
+  terria: PropTypes.object.isRequired,
+  viewState: PropTypes.object.isRequired,
+  themeOverrides: PropTypes.object
+};

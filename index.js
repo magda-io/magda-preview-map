@@ -1,144 +1,111 @@
-'use strict';
+import ConsoleAnalytics from "terriajs/lib/Core/Analytics/ConsoleAnalytics";
+import GoogleAnalytics from "terriajs/lib/Core/Analytics/GoogleAnalytics";
+import registerCatalogMembers from "terriajs/lib/Models/Catalog/registerCatalogMembers";
+import registerSearchProviders from "terriajs/lib/Models/SearchProviders/registerSearchProviders";
+import ShareDataService from "terriajs/lib/Models/ShareDataService";
+import Terria from "terriajs/lib/Models/Terria";
+import ViewState from "terriajs/lib/ReactViewModels/ViewState";
+import registerCustomComponentTypes from "terriajs/lib/ReactViews/Custom/registerCustomComponentTypes";
+import updateApplicationOnHashChange from "terriajs/lib/ViewModels/updateApplicationOnHashChange";
+import updateApplicationOnMessageFromParentWindow from "terriajs/lib/ViewModels/updateApplicationOnMessageFromParentWindow";
+import loadPlugins from "./lib/Core/loadPlugins";
+import registerMagdaCatalogMembers from "./lib/Models/registerMagdaCatalogMembers";
+import configurePreviewMode from "./lib/Views/configurePreviewMode";
+import showGlobalDisclaimer from "./lib/Views/showGlobalDisclaimer";
+import plugins from "./plugins";
 
-window.L_PREFER_CANVAS = true;
-
-/*global require,window */
-
-var terriaOptions = {
-    baseUrl: 'build/TerriaJS'
+const terriaOptions = {
+  baseUrl: "build/TerriaJS"
 };
 
-// checkBrowserCompatibility('ui');
-import GoogleAnalytics from 'terriajs/lib/Core/GoogleAnalytics';
-import ShareDataService from 'terriajs/lib/Models/ShareDataService';
-import raiseErrorToUser from 'terriajs/lib/Models/raiseErrorToUser';
-import registerAnalytics from 'terriajs/lib/Models/registerAnalytics';
-import registerCatalogMembers from 'terriajs/lib/Models/registerCatalogMembers';
-import registerCustomComponentTypes from 'terriajs/lib/ReactViews/Custom/registerCustomComponentTypes';
-import Terria from 'terriajs/lib/Models/Terria';
-import updateApplicationOnHashChange from 'terriajs/lib/ViewModels/updateApplicationOnHashChange';
-import updateApplicationOnMessageFromParentWindow from 'terriajs/lib/ViewModels/updateApplicationOnMessageFromParentWindow';
-import ViewState from 'terriajs/lib/ReactViewModels/ViewState';
-import BingMapsSearchProviderViewModel from 'terriajs/lib/ViewModels/BingMapsSearchProviderViewModel.js';
-import GazetteerSearchProviderViewModel from 'terriajs/lib/ViewModels/GazetteerSearchProviderViewModel.js';
-import GnafSearchProviderViewModel from 'terriajs/lib/ViewModels/GnafSearchProviderViewModel.js';
-import defined from 'terriajs-cesium/Source/Core/defined';
-import render from './lib/Views/render';
-import knockout from 'terriajs-cesium/Source/ThirdParty/knockout';
+// we check exact match for development to reduce chances that production flag isn't set on builds(?)
+if (process.env.NODE_ENV === "development") {
+  terriaOptions.analytics = new ConsoleAnalytics();
+} else {
+  terriaOptions.analytics = new GoogleAnalytics();
+}
 
-import createCatalogMemberFromType from 'terriajs/lib/Models/createCatalogMemberFromType';
-import MagdaCatalogItem from './lib/Models/MagdaCatalogItem';
-import ViewerMode from 'terriajs/lib/Models/ViewerMode.js';
+// Construct the TerriaJS application, arrange to show errors to the user, and start it up.
+const terria = new Terria(terriaOptions);
+
+// Create the ViewState before terria.start so that errors have somewhere to go.
+const viewState = new ViewState({
+  terria: terria
+});
 
 // Register all types of catalog members in the core TerriaJS.  If you only want to register a subset of them
 // (i.e. to reduce the size of your application if you don't actually use them all), feel free to copy a subset of
 // the code in the registerCatalogMembers function here instead.
 registerCatalogMembers();
-createCatalogMemberFromType.register('magda-item', MagdaCatalogItem);
-registerAnalytics();
+registerMagdaCatalogMembers(terria);
 
-terriaOptions.analytics = new GoogleAnalytics();
-terriaOptions.viewerMode = ViewerMode.CesiumEllipsoid;
-
-// Construct the TerriaJS application, arrange to show errors to the user, and start it up.
-var terria = new Terria(terriaOptions);
+// Register custom search providers in the core TerriaJS. If you only want to register a subset of them, or to add your own,
+// insert your custom version of the code in the registerSearchProviders function here instead.
+registerSearchProviders();
 
 // Register custom components in the core TerriaJS.  If you only want to register a subset of them, or to add your own,
 // insert your custom version of the code in the registerCustomComponentTypes function here instead.
 registerCustomComponentTypes(terria);
 
-// Create the ViewState before terria.start so that errors have somewhere to go.
-const viewState = new ViewState({
-    terria: terria
-});
-
-knockout.getObservable(viewState, 'notifications').subscribe(function() {
-    if (!viewState.notifications || !viewState.notifications.length) return;
-    const notification = viewState.notifications.shift();
-    if (!notification) return;
-    let msg = '';
-    if (typeof notification === 'string') msg = notification;
-    else if (notification.message) msg = notification.message;
-    else msg = String(notification);
-    if (!console || !console.log) return;
-    console.log(`Preview Map notifcation: \n ${msg}`);
-});
-
 if (process.env.NODE_ENV === "development") {
-    window.viewState = viewState;
+  window.viewState = viewState;
 }
 
-// If we're running in dev mode, disable the built style sheet as we'll be using the webpack style loader.
-// Note that if the first stylesheet stops being nationalmap.css then this will have to change.
-if (process.env.NODE_ENV !== "production" && module.hot) {
-    document.styleSheets[0].disabled = true;
-}
-
-terria.start({
-    // If you don't want the user to be able to control catalog loading via the URL, remove the applicationUrl property below
-    // as well as the call to "updateApplicationOnHashChange" further down.
+export default terria
+  .start({
     applicationUrl: window.location,
-    configUrl: 'config.json',
+    configUrl: "config.json",
     shareDataService: new ShareDataService({
-        terria: terria
-    })
-}).otherwise(function(e) {
-    raiseErrorToUser(terria, e);
-}).always(function() {
-    try {
-        viewState.searchState.locationSearchProviders = [
-            new BingMapsSearchProviderViewModel({
-                terria: terria,
-                key: terria.configParameters.bingMapsKey
-            }),
-            new GazetteerSearchProviderViewModel({terria}),
-            new GnafSearchProviderViewModel({terria})
-        ];
-
-        // Automatically update Terria (load new catalogs, etc.) when the hash part of the URL changes.
-        updateApplicationOnHashChange(terria, window);
-        updateApplicationOnMessageFromParentWindow(terria, window);
-
-        // Create the various base map options.
-        var createAustraliaBaseMapOptions = require('terriajs/lib/ViewModels/createAustraliaBaseMapOptions');
-        var createGlobalBaseMapOptions = require('terriajs/lib/ViewModels/createGlobalBaseMapOptions');
-        var selectBaseMap = require('terriajs/lib/ViewModels/selectBaseMap');
-        
-        var australiaBaseMaps = createAustraliaBaseMapOptions(terria);
-        var globalBaseMaps = createGlobalBaseMapOptions(terria, terria.configParameters.bingMapsKey);
-
-        var allBaseMaps = australiaBaseMaps.concat(globalBaseMaps);
-        selectBaseMap(terria, allBaseMaps, 'Bing Maps Aerial with Labels', true);
-
-        // Show a modal disclaimer before user can do anything else.
-        if (defined(terria.configParameters.globalDisclaimer)) {
-            var globalDisclaimer = terria.configParameters.globalDisclaimer;
-            var hostname = window.location.hostname;
-            if (globalDisclaimer.enableOnLocalhost || hostname.indexOf('localhost') === -1) {
-                var message = '';
-                // Sometimes we want to show a preamble if the user is viewing a site other than the official production instance.
-                // This can be expressed as a devHostRegex ("any site starting with staging.") or a negative prodHostRegex ("any site not ending in .gov.au")
-                if (defined(globalDisclaimer.devHostRegex) && hostname.match(globalDisclaimer.devHostRegex) ||
-                    defined(globalDisclaimer.prodHostRegex) && !hostname.match(globalDisclaimer.prodHostRegex)) {
-                    message += require('./lib/Views/DevelopmentDisclaimerPreamble.html');
-                }
-                message += require('./lib/Views/GlobalDisclaimer.html');
-
-                var options = {
-                    title: (globalDisclaimer.title !== undefined) ? globalDisclaimer.title : 'Warning',
-                    confirmText: (globalDisclaimer.buttonTitle || "Ok"),
-                    width: 600,
-                    height: 550,
-                    message: message,
-                    horizontalPadding : 100
-                };
-                viewState.notifications.push(options);
-            }
-        }
-
-        render(terria, allBaseMaps, viewState);
-    } catch (e) {
-        console.error(e);
-        console.error(e.stack);
+      terria: terria
+    }),
+    beforeRestoreAppState: () => {
+      // Load plugins before restoring app state because app state may
+      // reference plugin components and catalog items.
+      return loadPlugins(viewState, plugins).catch((error) => {
+        console.error(`Error loading plugins`);
+        console.error(error);
+      });
     }
-});
+  })
+  .catch(function (e) {
+    terria.raiseErrorToUser(e);
+  })
+  .finally(function () {
+    // Override the default document title with appName. Check first for default
+    // title, because user might have already customized the title in
+    // index.ejs
+    if (document.title === "Terria Map") {
+      document.title = terria.appName;
+    }
+
+    configurePreviewMode(terria, viewState);
+
+    // Load init sources like init files and share links
+    terria.loadInitSources().then((result) => result.raiseError(terria));
+
+    try {
+      // Automatically update Terria (load new catalogs, etc.) when the hash part of the URL changes.
+      updateApplicationOnHashChange(terria, window);
+      updateApplicationOnMessageFromParentWindow(terria, window);
+
+      // Show a modal disclaimer before user can do anything else.
+      if (terria.configParameters.globalDisclaimer) {
+        showGlobalDisclaimer(viewState);
+      }
+
+      // Add font-imports
+      const fontImports = terria.configParameters.theme?.fontImports;
+      if (fontImports) {
+        const styleSheet = document.createElement("style");
+        styleSheet.type = "text/css";
+        styleSheet.innerText = fontImports;
+        document.head.appendChild(styleSheet);
+      }
+    } catch (e) {
+      console.error(e);
+      console.error(e.stack);
+    }
+  })
+  .then(() => {
+    return { terria, viewState };
+  });

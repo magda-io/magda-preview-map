@@ -169,7 +169,7 @@ let MagdaCatalogItem;
 try {
   MagdaCatalogItem = require(path.resolve(
     __dirname,
-    "../../../lib/Models/MagdaCatalogItem.js"
+    "../legacy/MagdaCatalogItem.js"
   ));
 } finally {
   Module._load = originalLoad;
