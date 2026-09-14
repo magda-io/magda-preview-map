@@ -94,7 +94,9 @@
     "add-all-chart-version-changes": "git ls-files -m | grep Chart.yaml | xargs git add && git ls-files -m | grep Chart.lock | xargs git add",
     "add-all-helm-docs-changes": "yarn helm-docs && git ls-files -m | grep -i readme.md | xargs git add",
     "version": "yarn update-helm-chart-version && yarn update-all-charts && yarn add-all-chart-version-changes && yarn add-all-helm-docs-changes",
-    "helm-lint": "helm lint deploy/helm/magda-preview-map -f deploy/helm/test-deploy.yaml"
+    "helm-lint": "helm lint deploy/helm/magda-preview-map -f deploy/helm/test-deploy.yaml",
+    "test": "yarn test:characterization",
+    "test:characterization": "node --test test/characterization/*.test.cjs"
   },
   "magda": {
     "language": "javascript",

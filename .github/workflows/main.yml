@@ -7,6 +7,17 @@ env:
   REPO_NAME: magda-preview-map
 
 jobs:
+  compatibility-contract:
+    name: Magda preview compatibility contract
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node --test test/characterization/*.test.cjs
+
   build-test-docker:
     name: Build, Test & Push to Docker
     runs-on: ubuntu-latest

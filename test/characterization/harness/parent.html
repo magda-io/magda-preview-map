@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Magda preview parent protocol harness</title>
+    <style>
+      iframe { width: 100%; height: 420px; border: 0; }
+      [data-state="loading"] { color: #555; }
+      [data-state="success"] { color: #176b2c; }
+      [data-state="error"] { color: #a60000; }
+    </style>
+  </head>
+  <body>
+    <p id="state" data-state="loading">Loading</p>
+    <iframe
+      id="preview"
+      title="Magda preview protocol test"
+      src="about:blank"
+    ></iframe>
+    <script src="parent-harness.js"></script>
+    <script>
+      const fixtureConfig = {
+        baseUrl: "https://catalog.example.test/",
+        storageApiBaseUrl: "https://catalog.example.test/api/v0/storage/",
+        baseExternalUrl: "https://catalog.example.test/",
+        datasetsBucket: "magda-datasets"
+      };
+      const iframe = document.getElementById("preview");
+      const stateElement = document.getElementById("state");
+      const query = new URLSearchParams(window.location.search);
+      const previewUrl = query.get("previewUrl");
+      if (previewUrl) {
+        iframe.src = previewUrl.replace(/#.*$/, "") + MagdaPreviewParentHarness.IFRAME_HASH;
+      } else {
+        const stubUrl = query.get("scenario") === "error"
+          ? "preview.html?scenario=error"
+          : "preview.html";
+        iframe.src = stubUrl + MagdaPreviewParentHarness.IFRAME_HASH;
+      }
+      const startData = MagdaPreviewParentHarness.createStartData(
+        { title: "Harness distribution", identifier: "harness-distribution" },
+        "workspace:harness-layer",
+        true,
+        fixtureConfig
+      );
+      const parentHarness = MagdaPreviewParentHarness.createMessageHandler({
+        iframeWindow: iframe.contentWindow,
+        startData,
+        onStateChange(state) {
+          stateElement.dataset.state = state.error
+            ? "error"
+            : state.terminal
+              ? "success"
+              : "loading";
+          stateElement.textContent = state.error
+            ? state.error.message
+            : state.terminal
+              ? "Loading complete"
+              : "Loading";
+        }
+      });
+      window.addEventListener("message", parentHarness.onMessage);
+    </script>
+  </body>
+</html>
