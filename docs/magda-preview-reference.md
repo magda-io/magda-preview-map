@@ -21,8 +21,10 @@ returns a native TerriaJS 8 target model; it does not implement data loaders.
 
 The resulting native types are `wms`, `wfs`, `esri-mapServer`,
 `esri-featureServer`, `geojson`, `csv`, `kml`, and `czml`. WFS uses the native
-`maxFeatures=1000` bounded request. FeatureServer previews use the native JSON
-pagination path rather than the removed TerriaJS 6 service-level GeoJSON path.
+`maxFeatures=1000` bounded request. FeatureServer previews use TerriaJS's native
+request strategy: tiled PBF requests where supported, otherwise native
+FeatureServer query/pagination. This replaces the removed TerriaJS 6
+service-level GeoJSON path without disabling modern tiled requests.
 
 Legacy `isEnabled` is bridged to `terria.workbench.add`, which dereferences and
 loads the target. `zoomOnEnable` maps to `zoomOnAddToWorkbench`.

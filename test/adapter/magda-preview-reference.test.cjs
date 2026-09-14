@@ -177,7 +177,7 @@ test("generic Esri labels require MapServer or FeatureServer URL evidence", () =
   );
 });
 
-test("FeatureServer roots and explicit layers select the native resolution paths", () => {
+test("FeatureServer roots and explicit layers preserve the native request strategy", () => {
   const rootUrl = "https://services.example.test/arcgis/rest/services/example/FeatureServer";
   const layerUrl = `${rootUrl}/3`;
   assert.equal(compatibility.isFeatureServerRoot(rootUrl), true);
@@ -190,7 +190,7 @@ test("FeatureServer roots and explicit layers select the native resolution paths
   assert.match(source, /ArcGisFeatureServerCatalogGroup/);
   assert.match(source, /ArcGisFeatureServerCatalogItem/);
   assert.match(source, /isFeatureServerRoot\(definition\.url\)/);
-  assert.match(source, /definition\.type === "esri-featureServer"[\s\S]*tileRequests: false/);
+  assert.doesNotMatch(source, /tileRequests/);
 
   const nativeItem = fs.readFileSync(
     path.join(
@@ -199,6 +199,8 @@ test("FeatureServer roots and explicit layers select the native resolution paths
     ),
     "utf8"
   );
+  assert.match(nativeItem, /ProtomapsArcGisPbfSource/);
+  assert.match(nativeItem, /if \(this\.tileRequests\)/);
   assert.match(nativeItem, /resultRecordCount/);
   assert.match(nativeItem, /resultOffset/);
 });

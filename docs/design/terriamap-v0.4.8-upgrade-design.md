@@ -302,7 +302,7 @@ For:
 
 load service metadata and resolve a previewable layer. Selecting the first previewable layer is acceptable when the caller has provided no more specific layer selection.
 
-Use modern TerriaJS FeatureServer models and pagination rather than the old service-level GeoJSON path.
+Use TerriaJS's native FeatureServer request strategy rather than the old service-level GeoJSON path: tiled PBF requests where supported, otherwise native FeatureServer query/pagination.
 
 ## WFS request limits
 

@@ -123,9 +123,6 @@ export default class MagdaPreviewReference extends UrlMixin(
           ...(definition.type === "wfs"
             ? { maxFeatures: WFS_DEFAULT_MAX_FEATURES }
             : {}),
-          ...(definition.type === "esri-featureServer"
-            ? { tileRequests: false }
-            : {}),
           zoomOnAddToWorkbench: this.zoomOnEnable
         },
         true
