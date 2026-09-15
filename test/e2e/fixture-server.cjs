@@ -22,18 +22,23 @@ const frame = document.querySelector("#preview");
 const log = document.querySelector("#log");
 frame.onload = () => {
   log.textContent += "\\niframe loaded";
-  frame.contentWindow.postMessage({
-    initSources: [{ catalog: [{
-      type: "magda-item",
-      name: "Rejected cross-origin fixture",
-      url: "http://127.0.0.1:3101/",
-      storageApiUrl: "http://127.0.0.1:3101/storage/",
-      distributionId: "cross-rejected",
-      defaultBucket: "magda-datasets",
-      isEnabled: true,
-      zoomOnEnable: true
-    }], corsDomains: ["127.0.0.1"] }]
-  }, "*");
+};
+const rejectedStartData = {
+  initSources: [{ catalog: [{
+    type: "magda-item",
+    name: "Rejected cross-origin fixture",
+    url: "http://127.0.0.1:3101/",
+    storageApiUrl: "http://127.0.0.1:3101/storage/",
+    distributionId: "cross-rejected",
+    defaultBucket: "magda-datasets",
+    isEnabled: true,
+    zoomOnEnable: true
+  }], corsDomains: ["127.0.0.1"] }]
+};
+window.rejectedStartAttempts = 0;
+window.postRejectedStart = () => {
+  window.rejectedStartAttempts += 1;
+  frame.contentWindow.postMessage(rejectedStartData, "*");
 };
 window.addEventListener("message", event => {
   if (event.source === frame.contentWindow) log.textContent += "\\n" + event.data;

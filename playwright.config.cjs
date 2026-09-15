@@ -9,7 +9,7 @@ module.exports = defineConfig({
   use: { browserName: "chromium", headless: true },
   webServer: [
     {
-      command: "yarn start",
+      command: "yarn start:production",
       url: "http://127.0.0.1:3001/",
       reuseExistingServer: !process.env.CI,
       timeout: 60_000

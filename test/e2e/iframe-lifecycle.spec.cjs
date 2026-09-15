@@ -91,7 +91,25 @@ test("unconfigured cross-origin parent cannot start a preview load", async ({
   page.on("request", (request) => requests.push(request.url()));
   await page.goto(`${fixtureOrigin}/parent`);
   await expect(page.locator("#log")).toContainText("iframe loaded");
-  await page.waitForTimeout(1500);
+
+  const previewFrame = page
+    .frames()
+    .find((frame) => frame.url().startsWith(`${previewOrigin}/`));
+  expect(previewFrame).toBeTruthy();
+
+  // The title changes in Terria's completed startup callback immediately before
+  // configureMagdaPreviewLifecycle runs. Once the browser yields after this
+  // change, the lifecycle message listener is active.
+  await expect.poll(() => previewFrame.title()).toBe("MAGDA Preview Map");
+
+  // Repeated attempts over a bounded interval ensure this cannot pass because a
+  // single message happened to arrive before asynchronous Terria startup.
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    await page.evaluate(() => window.postRejectedStart());
+    await page.waitForTimeout(100);
+  }
+  expect(await page.evaluate(() => window.rejectedStartAttempts)).toBe(20);
+  await page.waitForTimeout(500);
 
   await expect(page.locator("#log")).toHaveText("boot\niframe loaded");
   expect(requests.some((url) => url.includes("cross-rejected"))).toBe(false);
