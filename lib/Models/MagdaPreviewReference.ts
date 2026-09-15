@@ -1,7 +1,9 @@
 import { IReactionDisposer, makeObservable, reaction } from "mobx";
 import loadJson from "terriajs/lib/Core/loadJson";
 import runLater from "terriajs/lib/Core/runLater";
-import TerriaError from "terriajs/lib/Core/TerriaError";
+import TerriaError, {
+  TerriaErrorSeverity
+} from "terriajs/lib/Core/TerriaError";
 import GroupMixin from "terriajs/lib/ModelMixins/GroupMixin";
 import ReferenceMixin from "terriajs/lib/ModelMixins/ReferenceMixin";
 import UrlMixin from "terriajs/lib/ModelMixins/UrlMixin";
@@ -19,6 +21,10 @@ import { BaseModel } from "terriajs/lib/Models/Definition/Model";
 import updateModelFromJson from "terriajs/lib/Models/Definition/updateModelFromJson";
 import Terria from "terriajs/lib/Models/Terria";
 import MagdaPreviewReferenceTraits from "../Traits/MagdaPreviewReferenceTraits";
+import {
+  beginMagdaPreviewItemLoad,
+  finishMagdaPreviewItemLoad
+} from "./MagdaPreviewLifecycle";
 import {
   buildRegistryRecordUrl,
   findCompatibleDefinition,
@@ -133,9 +139,25 @@ export default class MagdaPreviewReference extends UrlMixin(
 
   private updateEnabledState(isEnabled: boolean): void {
     if (isEnabled && !this.terria.workbench.contains(this)) {
+      const generation = beginMagdaPreviewItemLoad(this.terria);
       this.terria.workbench
         .add(this)
-        .then((result) => result.raiseError(this.terria));
+        .then((result) => {
+          const terminalError =
+            result.error?.resolvedSeverity === TerriaErrorSeverity.Error
+              ? result.error
+              : undefined;
+          finishMagdaPreviewItemLoad(
+            this.terria,
+            generation,
+            terminalError
+          );
+          result.raiseError(this.terria);
+        })
+        .catch((error) => {
+          finishMagdaPreviewItemLoad(this.terria, generation, error);
+          this.terria.raiseErrorToUser(error);
+        });
     } else if (!isEnabled) {
       this.terria.workbench.remove(this);
     }
