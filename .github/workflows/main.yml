@@ -2,6 +2,9 @@ name: Main CI Workflow
 
 on: push
 
+permissions:
+  contents: read
+
 env:
   REPO_NAME: magda-preview-map
 
@@ -20,7 +23,7 @@ jobs:
       - run: yarn test:characterization
 
   build-test:
-    name: Build and test TerriaMap foundation
+    name: Build, test, and package TerriaMap
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -30,15 +33,38 @@ jobs:
           node-version: 22
           cache: yarn
       - run: yarn install --frozen-lockfile
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+      - name: Build Helm dependencies
+        run: yarn update-all-charts
       - run: yarn lint
       - run: yarn test
       - run: yarn build:production
 
-      - name: helm-build-dependencies
-        run: yarn update-all-charts
+      - name: Install Chromium
+        run: yarn playwright install --with-deps chromium
+      - name: Run iframe integration tests
+        run: yarn test:e2e
 
-      - run: yarn helm-lint
+      - name: Lint Helm chart
+        run: yarn helm-lint
+      - name: Render Helm chart
+        run: helm template preview-map deploy/helm/magda-preview-map -f deploy/helm/test-deploy.yaml >/dev/null
 
-      # Container publication returns in #31 with the Node 24 runtime and the
-      # terriajs-server v5 deployment migration. The old Node 10 image cannot
-      # execute the TerriaMap v0.4.8 toolchain adopted in #28.
+  container-build:
+    name: Build Node 24 production image
+    runs-on: ubuntu-latest
+    needs: build-test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build production image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          push: false
+          build-args: GIT_COMMIT=${{ github.sha }}
+          tags: magda-preview-map:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

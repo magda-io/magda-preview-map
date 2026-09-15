@@ -1,7 +1,13 @@
 .git
 ckanext-cesiumpreview
 node_modules
+wwwroot/build
+wwwroot/index.html
+wwwroot/version.json
 third_party
 varnish
 npm-debug.log
 *.tar
+.cache
+playwright-report
+test-results

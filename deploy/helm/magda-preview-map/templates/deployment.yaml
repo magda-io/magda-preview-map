@@ -16,6 +16,7 @@ spec:
     metadata:
       annotations:
         checksum/serverConfig: {{ .Values.serverConfig | mustToRawJson | sha256sum }}
+        checksum/clientConfig: {{ .Values.clientConfig | mustToRawJson | sha256sum }}
       labels:
         service: preview-map
     spec:
@@ -24,11 +25,14 @@ spec:
       - name: preview-map
         resources:
 {{ toYaml .Values.resources | indent 10 }}
+        ports:
+          - name: http
+            containerPort: {{ .Values.serverConfig.port }}
 {{- if .Values.global.enableLivenessProbes }}
         livenessProbe:
           httpGet:
-            path: ""
-            port: 6110
+            path: /
+            port: {{ .Values.serverConfig.port }}
           initialDelaySeconds: 10
           periodSeconds: 10
           timeoutSeconds: 10
@@ -36,16 +40,20 @@ spec:
         env:
         - name: NODE_ENV
           value: production
+        - name: SERVER_CONFIG_PATH
+          value: /etc/config/serverConfig.json
+        - name: CLIENT_CONFIG_PATH
+          value: /etc/config/clientConfig.json
+        - name: DEFAULT_CLIENT_CONFIG_PATH
+          value: /app/default-client-config.json
+        - name: RUNTIME_CLIENT_CONFIG_PATH
+          value: /app/wwwroot/config.json
         image: {{ include "magda.image" . | quote }}
         imagePullPolicy: {{ include "magda.imagePullPolicy" . | quote }}
-        command: 
-          - "node"
-          - "node_modules/terriajs-server/lib/app.js"
-          - "--config-file"
-          - "/etc/config/serverConfig.json"
         volumeMounts:
           - name: server-config
             mountPath: /etc/config
+            readOnly: true
       volumes:
         - name: server-config
           configMap:

@@ -1,82 +1,90 @@
-name: CI Release Helm Chart
+name: Release image and Helm chart
 
 on:
   release:
     types: [published]
 
+permissions:
+  contents: read
+  packages: write
+
 env:
-  # [avoid issue when Github action upgraded from 18.04 default to 20.04](https://github.com/aws/aws-cli/issues/5262)
-  AWS_EC2_METADATA_DISABLED: true
   REPO_NAME: magda-preview-map
-  # Github account username (used for access github registry)
-  GH_USERNAME: magdabot
-  # Github Orgnisation name or user name for this repo
-  GH_ORGNAME: magda-io
-  #Docker Hub username
-  DH_USERNAME: magdabot
-  #S3 bucket name: this s3 bucket will be used to store published helm chart and index
   S3_BUCKET: magda-charts
 
 jobs:
-  release-helm-chart:
-    # Disabled during the staged migration: the existing image is tied to Node
-    # 10 and the removed TerriaJS 6 server entrypoint. Issue #31 replaces this
-    # workflow together with Docker, Helm and terriajs-server v5 deployment.
-    if: ${{ false }}
-    name: Release Helm Chart (disabled until #31)
+  release:
+    name: Publish Docker images and Helm chart
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-
-      - name: Use Node.js 10
-        uses: actions/setup-node@v1
+      - uses: actions/checkout@v4
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
         with:
-          node-version: 10
-      - run: yarn install
-      - run: yarn build
-
-      - name: helm-build-dependencies
+          node-version: 22
+          cache: yarn
+      - run: yarn install --frozen-lockfile
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+      - name: Build Helm dependencies
         run: yarn update-all-charts
+      - run: yarn test
+      - run: yarn build:production
 
-      - name: helm-check
+      - name: Lint Helm chart
         run: yarn helm-lint
-
-      - name: check-helm-chart-verion
-        run: yarn check-helm-chart-version deploy/helm/${REPO_NAME}/Chart.yaml
-
-      - name: Login to GitHub Package Repository
+      - name: Verify release and chart versions match
         env:
-          GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
-        run: docker login docker.pkg.github.com -u ${GH_USERNAME} -p ${GH_TOKEN}
-
-      - name: Build Docker Image & Push to Github Registry
-        run: yarn docker-build-prod --repository=docker.pkg.github.com/${GH_ORGNAME}/${REPO_NAME} --name=${REPO_NAME}
-
-      - name: Login to Docker Hub
-        env:
-          DH_TOKEN: ${{ secrets.DOCKER_HUB_PASSWORD }}
-        run: docker login -u ${DH_USERNAME} -p ${DH_TOKEN}
-
-      - name: Re-tag & Push Docker Image to Docker Hub
-        run: yarn retag-and-push --fromPrefix=docker.pkg.github.com/${GH_ORGNAME}/${REPO_NAME}/ --fromName=${REPO_NAME}
-
-      - name: Configure Git
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
-          git config user.name "$GITHUB_ACTOR"
-          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+          CHART_VERSION=$(awk '/^version:/ { print $2 }' deploy/helm/${REPO_NAME}/Chart.yaml)
+          test "${RELEASE_TAG#v}" = "$CHART_VERSION"
 
-      - name: Release Helm Chart
-        env:
-          CR_TOKEN: "${{ secrets.GH_ACCESS_TOKEN }}"
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      - uses: docker/setup-buildx-action@v3
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: magdabot
+          password: ${{ secrets.DOCKER_HUB_PASSWORD }}
+      - name: Generate compatible image tags
+        id: image-metadata
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ghcr.io/magda-io/magda-preview-map
+            docker.io/data61/magda-preview-map
+          tags: |
+            type=raw,value=${{ github.event.release.tag_name }}
+            type=semver,pattern={{version}},value=${{ github.event.release.tag_name }}
+      - name: Build and publish Node 24 image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          build-args: GIT_COMMIT=${{ github.sha }}
+          tags: ${{ steps.image-metadata.outputs.tags }}
+          labels: ${{ steps.image-metadata.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-southeast-2
+      - name: Publish Helm chart to the existing repository
         run: |
-          cd deploy/helm
-          mkdir -p sync_dir
-          mkdir -p index_dir
-          if ! aws s3 cp s3://${S3_BUCKET}/index.yaml index_dir/index.yaml; then echo "failed to copy current repo index" && exit 1; fi
-          helm package -d sync_dir ${REPO_NAME}
-          helm repo index --merge "index_dir/index.yaml" sync_dir
-          mv -f sync_dir/index.yaml index_dir/index.yaml
-          aws s3 sync sync_dir s3://${S3_BUCKET}/
-          aws s3 cp index_dir/index.yaml s3://${S3_BUCKET}/index.yaml
+          mkdir -p deploy/helm/sync_dir deploy/helm/index_dir
+          aws s3 cp s3://${S3_BUCKET}/index.yaml deploy/helm/index_dir/index.yaml
+          helm package -d deploy/helm/sync_dir deploy/helm/${REPO_NAME}
+          helm repo index --merge deploy/helm/index_dir/index.yaml deploy/helm/sync_dir
+          aws s3 sync deploy/helm/sync_dir s3://${S3_BUCKET}/
+          aws s3 cp deploy/helm/sync_dir/index.yaml s3://${S3_BUCKET}/index.yaml
