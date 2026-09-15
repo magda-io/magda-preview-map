@@ -69,8 +69,65 @@ http
         })
       );
     }
+    if (request.url?.startsWith("/api/v0/registry/records/storage")) {
+      return send(
+        response,
+        200,
+        "application/json",
+        JSON.stringify({
+          id: "storage",
+          aspects: {
+            "dcat-distribution-strings": {
+              format: "GeoJSON",
+              downloadURL: "magda://storage-api/storage.geojson"
+            }
+          }
+        })
+      );
+    }
+    if (request.url?.startsWith("/api/v0/registry/records/empty")) {
+      return send(
+        response,
+        200,
+        "application/json",
+        JSON.stringify({
+          id: "empty",
+          aspects: {
+            "dcat-distribution-strings": {
+              format: "GeoJSON",
+              downloadURL: `http://${host}:${port}/empty.geojson`
+            }
+          }
+        })
+      );
+    }
     if (request.url?.startsWith("/api/v0/registry/records/failure")) {
       return send(response, 503, "application/json", "{}");
+    }
+    if (request.url === "/storage/magda-datasets/storage.geojson") {
+      return send(
+        response,
+        200,
+        "application/json",
+        JSON.stringify({
+          type: "FeatureCollection",
+          features: [
+            {
+              type: "Feature",
+              properties: { name: "Storage API browser fixture" },
+              geometry: { type: "Point", coordinates: [149.13, -35.28] }
+            }
+          ]
+        })
+      );
+    }
+    if (request.url === "/empty.geojson") {
+      return send(
+        response,
+        200,
+        "application/json",
+        JSON.stringify({ type: "FeatureCollection", features: [] })
+      );
     }
     if (request.url === "/data.geojson") {
       return send(

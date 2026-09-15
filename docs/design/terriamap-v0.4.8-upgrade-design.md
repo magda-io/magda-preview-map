@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed implementation design for upgrading `magda-preview-map` to TerriaMap `v0.4.8` / TerriaJS `8.13.0` while preserving the current Magda preview integration contract.
+Implemented through the ordered upgrade tickets #27–#32. The compatibility and operational source of truth is now [`../magda-preview-reference.md`](../magda-preview-reference.md), [`../upstream-terriamap.md`](../upstream-terriamap.md), and the [issue #32 acceptance report](../issue-32-acceptance.md); this document remains the historical design record.
 
 ## Goal
 

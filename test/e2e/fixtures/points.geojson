@@ -1,0 +1,15 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "name": "Canberra" },
+      "geometry": { "type": "Point", "coordinates": [149.13, -35.2809] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Melbourne" },
+      "geometry": { "type": "Point", "coordinates": [144.9631, -37.8136] }
+    }
+  ]
+}

@@ -21,6 +21,7 @@ function startData(distributionId, name) {
             zoomOnEnable: true
           }
         ],
+        baseMapName: "Positron (Light)",
         corsDomains: ["127.0.0.1"]
       }
     ]
@@ -30,6 +31,8 @@ function startData(distributionId, name) {
 test("unchanged same-origin parent reaches success and error terminal states", async ({
   page
 }) => {
+  const requests = [];
+  page.on("request", (request) => requests.push(request.url()));
   await page.goto(previewOrigin);
   await page.evaluate(
     ({ previewOrigin, startData }) => {
@@ -63,6 +66,44 @@ test("unchanged same-origin parent reaches success and error terminal states", a
   await expect(log).toContainText("ready");
   await expect(log).toContainText("loading complete");
   expect((await log.textContent()).match(/loading complete/g)).toHaveLength(1);
+  await expect
+    .poll(() => requests.some((url) => url.includes("tile.openstreetmap.org")))
+    .toBe(true);
+  expect(
+    requests.some((url) =>
+      /cartocdn|cartodb-basemaps|global\.ssl\.fastly\.net/i.test(url)
+    )
+  ).toBe(false);
+
+  await page.evaluate(
+    (emptyStartData) => {
+      document
+        .querySelector("#preview")
+        .contentWindow.postMessage(emptyStartData, "*");
+    },
+    startData("empty", "Empty GeoJSON fixture")
+  );
+  await expect
+    .poll(async () => (await log.textContent()).match(/loading complete/g))
+    .toHaveLength(2);
+  expect(requests.some((url) => url.endsWith("/empty.geojson"))).toBe(true);
+
+  await page.evaluate(
+    (storageStartData) => {
+      document
+        .querySelector("#preview")
+        .contentWindow.postMessage(storageStartData, "*");
+    },
+    startData("storage", "Storage API GeoJSON fixture")
+  );
+  await expect
+    .poll(async () => (await log.textContent()).match(/loading complete/g))
+    .toHaveLength(3);
+  expect(
+    requests.some((url) =>
+      url.endsWith("/storage/magda-datasets/storage.geojson")
+    )
+  ).toBe(true);
 
   await page.evaluate(
     (failureStartData) => {

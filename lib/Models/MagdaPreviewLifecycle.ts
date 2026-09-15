@@ -60,6 +60,8 @@ export function parentMessageAllowedOrigins(
   return origins;
 }
 
+const LEGACY_POSITRON_BASEMAP_NAME = "Positron (Light)";
+
 export function containsMagdaPreviewItem(value: unknown): boolean {
   const visited = new WeakSet<object>();
 
@@ -82,6 +84,48 @@ export function containsMagdaPreviewItem(value: unknown): boolean {
   return visit(value);
 }
 
+function requestsLegacyPositronBaseMap(value: unknown): boolean {
+  if (!value || typeof value !== "object" || !("initSources" in value)) {
+    return false;
+  }
+  const initSources = value.initSources;
+  return (
+    Array.isArray(initSources) &&
+    initSources.some(
+      (source) =>
+        source !== null &&
+        typeof source === "object" &&
+        "baseMapName" in source &&
+        source.baseMapName === LEGACY_POSITRON_BASEMAP_NAME
+    )
+  );
+}
+
+export async function selectLegacyPreviewBaseMap(
+  terria: Terria,
+  startData: unknown
+): Promise<void> {
+  if (!requestsLegacyPositronBaseMap(startData)) return;
+
+  const baseMaps = terria.baseMapsModel;
+  const configuredPositron = baseMaps.findBaseMapByName(
+    LEGACY_POSITRON_BASEMAP_NAME
+  );
+  const configuredDefault =
+    configuredPositron ??
+    (baseMaps.defaultBaseMapId
+      ? baseMaps.findBaseMapById(baseMaps.defaultBaseMapId)
+      : undefined) ??
+    (baseMaps.defaultBaseMapName
+      ? baseMaps.findBaseMapByName(baseMaps.defaultBaseMapName)
+      : undefined) ??
+    baseMaps.baseMapItems[0];
+
+  if (configuredDefault?.item) {
+    await terria.mainViewer.setBaseMap(configuredDefault.item);
+  }
+}
+
 function errorText(value: unknown, fallback: string): string {
   if (typeof value === "string" && value.length > 0) return value;
   return fallback;
@@ -95,7 +139,9 @@ function postToEmbeddingWindow(state: LifecycleState, message: unknown): void {
   }
 
   targets.forEach((target) => {
-    state.allowedOrigins.forEach((origin) => target.postMessage(message, origin));
+    state.allowedOrigins.forEach((origin) =>
+      target.postMessage(message, origin)
+    );
   });
 }
 
@@ -104,11 +150,7 @@ function postTerminal(
   generation: number,
   error?: unknown
 ): void {
-  if (
-    !state.active ||
-    state.generation !== generation ||
-    state.terminal
-  ) {
+  if (!state.active || state.generation !== generation || state.terminal) {
     return;
   }
 
@@ -129,9 +171,7 @@ function postTerminal(
   );
 }
 
-export function beginMagdaPreviewItemLoad(
-  terria: Terria
-): number | undefined {
+export function beginMagdaPreviewItemLoad(terria: Terria): number | undefined {
   const state = lifecycleStates.get(terria);
   if (!state?.active || state.terminal) return undefined;
   state.pendingLoads += 1;
@@ -214,13 +254,19 @@ export default function configureMagdaPreviewLifecycle(
 
         if (generation !== undefined && result.error) {
           postTerminal(state, generation, result.error);
-        } else if (generation !== undefined) {
+        } else if (
+          generation !== undefined &&
+          state.generation === generation
+        ) {
+          await selectLegacyPreviewBaseMap(terria, event.data);
           // MagdaPreviewReference schedules its initial enable check as a
           // microtask. Complete here only when no item load started, which is
           // the reused/already-loaded iframe case.
-          Promise.resolve().then(() => {
-            if (state.pendingLoads === 0) postTerminal(state, generation!);
-          });
+          if (state.generation === generation) {
+            Promise.resolve().then(() => {
+              if (state.pendingLoads === 0) postTerminal(state, generation!);
+            });
+          }
         }
         result.raiseError(terria);
       } catch (error) {

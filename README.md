@@ -4,7 +4,11 @@
 
 A Helm chart for Magda Preview Map module - forked from Terria Map Repo
 
-See the [TerriaJS README](https://github.com/TerriaJS/TerriaJS) or [TerriaMap Repo](https://github.com/TerriaJS/TerriaMap) for more information. Runtime image, proxy, release, and cross-origin parent configuration are documented in [`docs/deployment.md`](docs/deployment.md).
+The application foundation is [TerriaMap v0.4.8](https://github.com/TerriaJS/TerriaMap/tree/v0.4.8) with TerriaJS 8.13.0. Magda-specific behavior is kept in a thin compatibility layer for the unchanged `magda-item` iframe payload.
+
+Application tooling requires Node 22 or newer; the production image runs Node 24 and `terriajs-server` 5. The default basemap is free OpenStreetMap. The legacy caller request for `Positron (Light)` uses a deployment-provided replacement of that name when configured, otherwise it deterministically falls back to the configured default.
+
+See [deployment and local real-client verification](docs/deployment.md), the [compatibility reference](docs/magda-preview-reference.md), and the [upstream-difference record](docs/upstream-terriamap.md).
 
 **Homepage:** <https://github.com/magda-io/magda-preview-map>
 
