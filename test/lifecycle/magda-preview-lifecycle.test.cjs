@@ -102,6 +102,65 @@ test("detects the unchanged Magda catalog payload without matching unrelated dat
   );
 });
 
+test("legacy Positron requests select the configured free default", async () => {
+  const selected = [];
+  const openStreetMap = { item: { uniqueId: "basemap-openstreetmap" } };
+  const terria = {
+    baseMapsModel: {
+      defaultBaseMapId: "basemap-openstreetmap",
+      defaultBaseMapName: undefined,
+      baseMapItems: [openStreetMap],
+      findBaseMapById(id) {
+        return id === "basemap-openstreetmap" ? openStreetMap : undefined;
+      },
+      findBaseMapByName() {
+        return undefined;
+      }
+    },
+    mainViewer: {
+      async setBaseMap(item) {
+        selected.push(item);
+      }
+    }
+  };
+  const startData = magdaStartData();
+  startData.initSources[0].baseMapName = "Positron (Light)";
+
+  await lifecycle.selectLegacyPreviewBaseMap(terria, startData);
+
+  assert.deepEqual(selected, [openStreetMap.item]);
+});
+
+test("operator-configured Positron basemap takes precedence", async () => {
+  const selected = [];
+  const licensedPositron = { item: { uniqueId: "licensed-positron" } };
+  const openStreetMap = { item: { uniqueId: "basemap-openstreetmap" } };
+  const terria = {
+    baseMapsModel: {
+      defaultBaseMapId: "basemap-openstreetmap",
+      defaultBaseMapName: undefined,
+      baseMapItems: [openStreetMap],
+      findBaseMapById() {
+        return openStreetMap;
+      },
+      findBaseMapByName(name) {
+        return name === "Positron (Light)" ? licensedPositron : undefined;
+      }
+    },
+    mainViewer: {
+      async setBaseMap(item) {
+        selected.push(item);
+      }
+    }
+  };
+  const startData = magdaStartData();
+  startData.initSources[0].baseMapName = "Positron (Light)";
+
+  await lifecycle.selectLegacyPreviewBaseMap(terria, startData);
+
+  assert.deepEqual(selected, [licensedPositron.item]);
+});
+
 test("allows same-origin and explicitly configured parents without wildcard trust", () => {
   const origins = lifecycle.parentMessageAllowedOrigins(
     {
@@ -253,6 +312,52 @@ test("a reused iframe resets state and ignores an older in-flight load", async (
   assert.deepEqual(h.messages, []);
   lifecycle.finishMagdaPreviewItemLoad(h.terria, secondGeneration);
   assert.equal(h.messages.at(-1).data, "loading complete");
+});
+
+test("an older start-data generation cannot apply a stale basemap", async () => {
+  const firstUpdate = deferred();
+  const selected = [];
+  const h = harness({
+    update: async (startData) => {
+      const name = startData.initSources[0].catalog[0].name;
+      return name === "First" ? firstUpdate.promise : result();
+    }
+  });
+  const openStreetMap = { item: { uniqueId: "basemap-openstreetmap" } };
+  h.terria.baseMapsModel = {
+    defaultBaseMapId: "basemap-openstreetmap",
+    defaultBaseMapName: undefined,
+    baseMapItems: [openStreetMap],
+    findBaseMapById() {
+      return openStreetMap;
+    },
+    findBaseMapByName() {
+      return undefined;
+    }
+  };
+  h.terria.mainViewer = {
+    async setBaseMap(item) {
+      selected.push(item);
+    }
+  };
+
+  const firstData = magdaStartData("First");
+  firstData.initSources[0].baseMapName = "Positron (Light)";
+  const first = h.dispatch({
+    origin: "https://preview.example.test",
+    source: h.parent,
+    data: firstData
+  });
+  const second = h.dispatch({
+    origin: "https://preview.example.test",
+    source: h.parent,
+    data: magdaStartData("Second")
+  });
+  await second;
+  firstUpdate.resolve(result());
+  await first;
+
+  assert.deepEqual(selected, []);
 });
 
 test("an already-loaded item still terminates after accepted start data", async () => {

@@ -170,18 +170,13 @@ test("Storage API rewrite defaults to magda-datasets when no bucket field is sup
   assert.equal(result.item.url, fixture.storage.defaultBucketResult);
 });
 
-test("current caller defaultBucket is accepted through catalog resolution", async (t) => {
+test("current caller defaultBucket is accepted through catalog resolution", async () => {
   const result = await resolveStorageFixture({
     defaultBucket: fixture.storage.callerBucket
   });
-  const expected =
-    subject.id === "legacy-terria6"
-      ? fixture.storage.callerBucketLegacyObservedResult
-      : fixture.storage.callerBucketContractResult;
 
   assert.equal(result.error, undefined);
-  assert.equal(result.item.url, expected);
-  if (subject.id === "legacy-terria6") t.todo(fixture.storage.knownGap);
+  assert.equal(result.item.url, fixture.storage.callerBucketContractResult);
 });
 
 test("legacy datasetBucket is accepted through catalog resolution", async () => {
@@ -192,19 +187,14 @@ test("legacy datasetBucket is accepted through catalog resolution", async () => 
   assert.equal(result.item.url, fixture.storage.datasetBucketResult);
 });
 
-test("defaultBucket takes precedence when both bucket fields are supplied", async (t) => {
+test("defaultBucket takes precedence when both bucket fields are supplied", async () => {
   const result = await resolveStorageFixture({
     defaultBucket: fixture.storage.callerBucket,
     datasetBucket: fixture.storage.datasetBucket
   });
-  const expected =
-    subject.id === "legacy-terria6"
-      ? fixture.storage.conflictLegacyObservedResult
-      : fixture.storage.conflictContractResult;
 
   assert.equal(result.error, undefined);
-  assert.equal(result.item.url, expected);
-  if (subject.id === "legacy-terria6") t.todo(fixture.storage.knownGap);
+  assert.equal(result.item.url, fixture.storage.conflictContractResult);
 });
 
 test("ordinary HTTP distribution URLs are not rewritten", () => {

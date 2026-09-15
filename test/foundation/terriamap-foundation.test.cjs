@@ -27,6 +27,23 @@ test("legacy TerriaJS 6 production shell is removed", () => {
   assert.equal(fs.existsSync(path.join(root, "lib/Views/RelatedMaps.jsx")), false);
 });
 
+test("obsolete v6 characterization and NationalMap assets are removed", () => {
+  [
+    "test/characterization/legacy/MagdaCatalogItem.js",
+    "test/characterization/support/legacy-terria6-driver.cjs",
+    "wwwroot/public",
+    "wwwroot/data",
+    "deploy/aws",
+    "deploy/helm/terria",
+    "varnish"
+  ].forEach((file) => assert.equal(fs.existsSync(path.join(root, file)), false));
+
+  for (const file of ["wwwroot/404.html", "wwwroot/500.html"]) {
+    const page = read(file);
+    assert.doesNotMatch(page, /NationalMap|\/public\//);
+  }
+});
+
 test("React 18 root renders the upstream StandardUserInterface", () => {
   const render = read("lib/Views/render.jsx");
   const ui = read("lib/Views/UserInterface.jsx");
@@ -53,6 +70,12 @@ test("application keeps the hash hook and secure preview lifecycle bridge", () =
   assert.match(application, /registerCatalogMembers\(\)/);
   assert.match(application, /registerMagdaCatalogMembers\(terria\)/);
   assert.match(application, /beforeRestoreAppState/);
+});
+
+test("preview defaults to the free OpenStreetMap basemap", () => {
+  const init = JSON.parse(read("wwwroot/init/simple.json"));
+
+  assert.equal(init.baseMaps.defaultBaseMapId, "basemap-openstreetmap");
 });
 
 test("preview mode hides application chrome but retains map navigation", () => {

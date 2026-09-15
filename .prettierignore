@@ -7,8 +7,6 @@ wwwroot/doc/
 wwwroot/index.html
 npm-debug.log
 version.js
-wwwroot/init/nm.json
-datasources/00_National_Data_Sets.json
 .DS_Store
 .localized
 .sass-cache
@@ -21,9 +19,9 @@ datasources/00_National_Data_Sets.json
 /output.log
 privateserverconfig.json
 wwwroot/privateconfig.json
-deploy/packages/
-deploy/work/
 packages/
+deploy/helm/sync_dir/
+deploy/helm/index_dir/
 pancake/
 yarn-error.log
 
@@ -37,9 +35,6 @@ yarn.lock
 .yarn/releases/
 
 # wwwroot
-wwwroot/public/
 wwwroot/*.html
 
-
 ckanext-cesiumpreview
-deploy/helm/terria/charts/terriamap/templates/

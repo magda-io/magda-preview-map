@@ -5,7 +5,6 @@ wwwroot/build
 wwwroot/index.html
 wwwroot/version.json
 third_party
-varnish
 npm-debug.log
 *.tar
 .cache

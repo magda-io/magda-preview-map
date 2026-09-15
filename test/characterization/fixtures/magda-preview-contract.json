@@ -55,12 +55,9 @@
     "defaultBucketResult": "https://catalog.example.test/api/v0/storage/magda-datasets/dataset-id/distribution-id/a%20file.geojson",
     "callerBucket": "caller-bucket",
     "callerBucketContractResult": "https://catalog.example.test/api/v0/storage/caller-bucket/dataset-id/distribution-id/a%20file.geojson",
-    "callerBucketLegacyObservedResult": "https://catalog.example.test/api/v0/storage/magda-datasets/dataset-id/distribution-id/a%20file.geojson",
     "datasetBucket": "legacy-bucket",
     "datasetBucketResult": "https://catalog.example.test/api/v0/storage/legacy-bucket/dataset-id/distribution-id/a%20file.geojson",
-    "conflictContractResult": "https://catalog.example.test/api/v0/storage/caller-bucket/dataset-id/distribution-id/a%20file.geojson",
-    "conflictLegacyObservedResult": "https://catalog.example.test/api/v0/storage/legacy-bucket/dataset-id/distribution-id/a%20file.geojson",
-    "knownGap": "The TerriaJS 6 model ignores the current caller's defaultBucket field; the TerriaJS 8 adapter must use defaultBucket before datasetBucket."
+    "conflictContractResult": "https://catalog.example.test/api/v0/storage/caller-bucket/dataset-id/distribution-id/a%20file.geojson"
   },
   "formats": [
     {
