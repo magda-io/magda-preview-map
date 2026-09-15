@@ -12,6 +12,7 @@
     "url": "https://github.com/magda-io/magda-preview-map"
   },
   "dependencies": {
+    "json5": "^2.1.0",
     "terriajs-server": "5.0.0"
   },
   "resolutions": {
@@ -23,6 +24,7 @@
     "@babel/preset-env": "^7.29.2",
     "@babel/preset-react": "^7.28.5",
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "1.63.0",
     "@swc/core": "1.15.46",
     "@typescript-eslint/eslint-plugin": "^8.58.1",
     "@typescript-eslint/parser": "^8.58.1",
@@ -42,7 +44,6 @@
     "html-webpack-plugin": "^5.6.3",
     "husky": "^9.1.7",
     "is-subdir": "^1.2.0",
-    "json5": "^2.1.0",
     "lodash": "^4.17.21",
     "minimist": "^1.2.8",
     "msw": "^2.12.14",
@@ -71,6 +72,8 @@
   },
   "scripts": {
     "start": "terriajs-server --config-file serverconfig.json",
+    "start:production": "node scripts/start-preview-server.cjs",
+    "set-version": "node scripts/set-version.cjs",
     "gulp": "gulp",
     "build": "gulp build",
     "build:production": "gulp release",
@@ -79,10 +82,12 @@
     "prettier": "prettier --write .",
     "prettier-check": "prettier --check .",
     "lint": "gulp lint",
-    "test": "node --test test/adapter/*.test.cjs test/characterization/*.test.cjs test/foundation/*.test.cjs test/lifecycle/*.test.cjs",
+    "test": "node --test test/adapter/*.test.cjs test/characterization/*.test.cjs test/deployment/*.test.cjs test/foundation/*.test.cjs test/lifecycle/*.test.cjs test/server/*.test.cjs",
     "test:adapter": "node --test test/adapter/*.test.cjs",
     "test:characterization": "node --test test/characterization/*.test.cjs",
     "test:characterization:legacy": "MAGDA_CHARACTERIZATION_SUBJECT=test/characterization/support/legacy-terria6-driver.cjs node --test test/characterization/*.test.cjs",
+    "test:deployment": "node --test test/deployment/*.test.cjs test/server/*.test.cjs",
+    "test:e2e": "playwright test",
     "test:foundation": "node --test test/foundation/*.test.cjs",
     "test:lifecycle": "node --test test/lifecycle/*.test.cjs",
     "helm-docs": "docker run --rm -v \"$(pwd):/helm-docs\" -u $(id -u) jnorwood/helm-docs:v1.11.0 -t ./README.md.gotmpl -o ../../../README.md",

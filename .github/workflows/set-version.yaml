@@ -6,38 +6,36 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Please input the new version number. e.g. `v2.0.0-alpha.0` with leading `v`"
+        description: "New semantic version with a leading v, for example v2.0.0-alpha.0"
         required: true
         type: string
 
+permissions:
+  contents: write
+
 jobs:
-  log-the-inputs:
+  set-version:
     runs-on: ubuntu-latest
     steps:
-      - name: Version validation
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+      - run: yarn install --frozen-lockfile
+      - name: Update package and chart versions
         env:
           SELECTED_VERSION: ${{ inputs.version }}
-        run: |
-          SEMVER_REGEX="^v(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(\\-[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?(\\+[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?$"
-          [[ "${SELECTED_VERSION}" =~ $SEMVER_REGEX ]] || { echo "Invalid version number '$SELECTED_VERSION'. Should be e.g. 'v2.0.0-alpha.0' with leading 'v'." ; exit 1; }
-      - uses: actions/checkout@v3
-
-      - name: Use Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: 10
-
-      - name: Install Utilities
-        run: yarn install
-
-      - name: Setup Git
+        run: yarn set-version "$SELECTED_VERSION"
+      - name: Commit version
+        env:
+          SELECTED_VERSION: ${{ inputs.version }}
         run: |
           git config user.name "$GITHUB_ACTOR"
           git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
-      - name: Set version
-        env:
-          SELECTED_VERSION: ${{ inputs.version }}
-        run: |
-          VERSION_NUM=$(echo ${SELECTED_VERSION} | cut -b 2-)
-          yarn version --new-version ${VERSION_NUM}
+          git add package.json deploy/helm/magda-preview-map/Chart.yaml
+          git commit -m "chore: set version ${SELECTED_VERSION}"
           git push

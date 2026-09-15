@@ -4,4 +4,5 @@ metadata:
   name: "magda-map-preview-config"
 data:
   serverConfig.json: {{ .Values.serverConfig | mustToRawJson | quote }}
+  clientConfig.json: {{ dict "parameters" (dict "parentMessageAllowedOrigins" .Values.clientConfig.parentMessageAllowedOrigins) | mustToRawJson | quote }}
 

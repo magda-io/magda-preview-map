@@ -52,12 +52,17 @@ gulp.task("write-version", function (done) {
   // package's node_modules (standalone) or hoisted to the workspace root (monorepo).
   const terriajsPackageJson = require("terriajs/package.json");
 
+  const gitStatus = spawnSync("git", ["status", "--porcelain"]);
   const isClean =
-    spawnSync("git", ["status", "--porcelain"]).stdout.toString().length === 0;
+    Boolean(process.env.GIT_COMMIT) ||
+    (gitStatus.status === 0 && gitStatus.stdout.toString().length === 0);
 
-  const gitHash = spawnSync("git", ["rev-parse", "--short", "HEAD"])
-    .stdout.toString()
-    .replace("\n", "");
+  const gitRevision = spawnSync("git", ["rev-parse", "--short", "HEAD"]);
+  const gitHash =
+    process.env.GIT_COMMIT ||
+    (gitRevision.status === 0
+      ? gitRevision.stdout.toString().replace("\n", "")
+      : "container");
 
   let version = `${dateString}-${packageJson.version}-${terriajsPackageJson.version}-${gitHash}`;
 

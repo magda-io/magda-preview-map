@@ -4,7 +4,7 @@
 
 A Helm chart for Magda Preview Map module - forked from Terria Map Repo
 
-See the [TerriaJS README](https://github.com/TerriaJS/TerriaJS) or [TerriaMap Repo](https://github.com/TerriaJS/TerriaMap) for more information.
+See the [TerriaJS README](https://github.com/TerriaJS/TerriaJS) or [TerriaMap Repo](https://github.com/TerriaJS/TerriaMap) for more information. Runtime image, proxy, release, and cross-origin parent configuration are documented in [`docs/deployment.md`](docs/deployment.md).
 
 **Homepage:** <https://github.com/magda-io/magda-preview-map>
 
@@ -28,6 +28,7 @@ Kubernetes: `>= 1.14.0-0`
 | autoscaler.maxReplicas | int | `3` |  |
 | autoscaler.minReplicas | int | `1` |  |
 | autoscaler.targetCPUUtilizationPercentage | int | `80` |  |
+| clientConfig.parentMessageAllowedOrigins | list | `[]` | Exact cross-origin iframe parent origins; same-origin is automatic. |
 | defaultImage.imagePullSecret | bool | `false` |  |
 | defaultImage.pullPolicy | string | `"IfNotPresent"` |  |
 | defaultImage.repository | string | `"docker.io/data61"` |  |

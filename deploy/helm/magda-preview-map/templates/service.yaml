@@ -5,8 +5,8 @@ metadata:
 spec:
   ports:
   - name: http
-    port: 6110
-    targetPort: 6110
+    port: {{ .Values.serverConfig.port }}
+    targetPort: {{ .Values.serverConfig.port }}
 {{- if .Values.global.exposeNodePorts }}
     nodePort: 30110
   type: NodePort

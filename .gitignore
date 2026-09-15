@@ -24,5 +24,8 @@ wwwroot/privateconfig.json
 deploy/packages/
 deploy/work/
 packages/
+.cache/
+playwright-report/
+test-results/
 
 deploy/**/charts
