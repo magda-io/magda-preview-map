@@ -84,7 +84,8 @@ CI uses Node 22 for application tooling, runs unit/compatibility/server tests,
 builds production assets, runs the Playwright iframe protocol tests, lints and
 renders Helm, and builds the Node 24 image.
 
-Published GitHub releases build and publish the same image to GHCR and the
-existing `data61/magda-preview-map` Docker Hub repository, then publish the Helm
-chart to the existing `magda-charts` S3 repository. The release tag (without a
-leading `v`) must match the chart version.
+Published GitHub releases build a `linux/amd64` and `linux/arm64` image at
+`ghcr.io/magda-io/magda-preview-map` and publish the Helm chart to
+`oci://ghcr.io/magda-io/charts`. The chart defaults to that GHCR image. The
+release tag, `package.json` version, and chart version must match; see the
+[versioning and release process](ci-version-release.md).

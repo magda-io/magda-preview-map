@@ -1,7 +1,7 @@
 "use strict";
 
 const assert = require("node:assert/strict");
-const { execFileSync } = require("node:child_process");
+const { execFileSync, spawnSync } = require("node:child_process");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
@@ -130,6 +130,45 @@ test("version utility updates package and Helm chart together", () => {
         "Chart.yaml"
       ),
       "apiVersion: v2\nname: fixture\nversion: 1.0.0\n"
+    );
+
+    for (const invalidVersion of [
+      "2.0.0-alpha.1",
+      "v1.0.0-01",
+      "v1.0.0+build.1"
+    ]) {
+      const result = spawnSync(
+        process.execPath,
+        [
+          path.join(temporaryRoot, "scripts", "set-version.cjs"),
+          invalidVersion
+        ],
+        { encoding: "utf8" }
+      );
+      assert.notEqual(result.status, 0, `${invalidVersion} should be rejected`);
+      assert.match(
+        result.stderr,
+        /Expected publishable semantic version with a leading v/
+      );
+    }
+    assert.equal(
+      JSON.parse(
+        fs.readFileSync(path.join(temporaryRoot, "package.json"), "utf8")
+      ).version,
+      "1.0.0"
+    );
+    assert.match(
+      fs.readFileSync(
+        path.join(
+          temporaryRoot,
+          "deploy",
+          "helm",
+          "magda-preview-map",
+          "Chart.yaml"
+        ),
+        "utf8"
+      ),
+      /^version: 1\.0\.0$/m
     );
 
     execFileSync(process.execPath, [

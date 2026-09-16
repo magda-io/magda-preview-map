@@ -8,7 +8,9 @@ The application foundation is [TerriaMap v0.4.8](https://github.com/TerriaJS/Ter
 
 Application tooling requires Node 22 or newer; the production image runs Node 24 and `terriajs-server` 5. The default basemap is free OpenStreetMap. The legacy caller request for `Positron (Light)` uses a deployment-provided replacement of that name when configured, otherwise it deterministically falls back to the configured default.
 
-See [deployment and local real-client verification](docs/deployment.md), the [compatibility reference](docs/magda-preview-reference.md), and the [upstream-difference record](docs/upstream-terriamap.md).
+The release artifacts are the `ghcr.io/magda-io/magda-preview-map` image and the Helm chart at `oci://ghcr.io/magda-io/charts`.
+
+See the [versioning and release process](docs/ci-version-release.md), [deployment and local real-client verification](docs/deployment.md), the [compatibility reference](docs/magda-preview-reference.md), and the [upstream-difference record](docs/upstream-terriamap.md).
 
 **Homepage:** <https://github.com/magda-io/magda-preview-map>
 
@@ -32,10 +34,10 @@ Kubernetes: `>= 1.14.0-0`
 | autoscaler.maxReplicas | int | `3` |  |
 | autoscaler.minReplicas | int | `1` |  |
 | autoscaler.targetCPUUtilizationPercentage | int | `80` |  |
-| clientConfig.parentMessageAllowedOrigins | list | `[]` | Exact cross-origin iframe parent origins; same-origin is automatic. |
+| clientConfig.parentMessageAllowedOrigins | list | `[]` | Exact origins allowed to embed the preview map and send start data. Same-origin parents are always allowed. |
 | defaultImage.imagePullSecret | bool | `false` |  |
 | defaultImage.pullPolicy | string | `"IfNotPresent"` |  |
-| defaultImage.repository | string | `"docker.io/data61"` |  |
+| defaultImage.repository | string | `"ghcr.io/magda-io"` |  |
 | global.image | object | `{}` |  |
 | global.rollingUpdate | object | `{}` |  |
 | image.name | string | `"magda-preview-map"` |  |

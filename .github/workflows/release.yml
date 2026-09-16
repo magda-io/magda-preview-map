@@ -10,11 +10,10 @@ permissions:
 
 env:
   REPO_NAME: magda-preview-map
-  S3_BUCKET: magda-charts
 
 jobs:
   release:
-    name: Publish Docker images and Helm chart
+    name: Publish GHCR image and OCI Helm chart
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -28,63 +27,61 @@ jobs:
         uses: azure/setup-helm@v4
       - name: Build Helm dependencies
         run: yarn update-all-charts
-      - run: yarn test
-      - run: yarn build:production
 
-      - name: Lint Helm chart
-        run: yarn helm-lint
-      - name: Verify release and chart versions match
+      - name: Validate release tag and repository versions
+        id: release-version
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
-          CHART_VERSION=$(awk '/^version:/ { print $2 }' deploy/helm/${REPO_NAME}/Chart.yaml)
-          test "${RELEASE_TAG#v}" = "$CHART_VERSION"
+          SEMVER_REGEX="^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(\-(0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(\.(0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*)?$"
+          [[ "${RELEASE_TAG}" =~ ${SEMVER_REGEX} ]] || { echo "Invalid release tag '${RELEASE_TAG}': expected publishable semantic version with leading v and no build metadata."; exit 1; }
 
-      - uses: docker/setup-buildx-action@v3
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          CHART_VERSION=$(awk '/^version:/ { print $2 }' deploy/helm/${REPO_NAME}/Chart.yaml)
+          test "${RELEASE_TAG}" = "v${PACKAGE_VERSION}" || { echo "Release tag ${RELEASE_TAG} does not match package.json version ${PACKAGE_VERSION}."; exit 1; }
+          test "${RELEASE_TAG}" = "v${CHART_VERSION}" || { echo "Release tag ${RELEASE_TAG} does not match Helm chart version ${CHART_VERSION}."; exit 1; }
+          echo "version=${PACKAGE_VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Lint application
+        run: yarn lint
+      - name: Run tests
+        run: yarn test
+      - name: Build production application
+        run: yarn build:production
+      - name: Lint Helm chart
+        run: yarn helm-lint
+      - name: Render Helm chart
+        run: helm template preview-map deploy/helm/magda-preview-map -f deploy/helm/test-deploy.yaml >/dev/null
+      - name: Check generated Helm README
+        run: |
+          yarn helm-docs
+          git diff --exit-code -- README.md
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: magdabot
-          password: ${{ secrets.DOCKER_HUB_PASSWORD }}
-      - name: Generate compatible image tags
-        id: image-metadata
-        uses: docker/metadata-action@v5
-        with:
-          images: |
-            ghcr.io/magda-io/magda-preview-map
-            docker.io/data61/magda-preview-map
-          tags: |
-            type=raw,value=${{ github.event.release.tag_name }}
-            type=semver,pattern={{version}},value=${{ github.event.release.tag_name }}
-      - name: Build and publish Node 24 image
+      - name: Build and publish multi-architecture Node 24 image
         uses: docker/build-push-action@v6
         with:
           context: .
           file: Dockerfile
+          platforms: linux/amd64,linux/arm64
           push: true
           build-args: GIT_COMMIT=${{ github.sha }}
-          tags: ${{ steps.image-metadata.outputs.tags }}
-          labels: ${{ steps.image-metadata.outputs.labels }}
+          tags: |
+            ghcr.io/magda-io/magda-preview-map:${{ github.sha }}
+            ghcr.io/magda-io/magda-preview-map:${{ steps.release-version.outputs.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ap-southeast-2
-      - name: Publish Helm chart to the existing repository
-        run: |
-          mkdir -p deploy/helm/sync_dir deploy/helm/index_dir
-          aws s3 cp s3://${S3_BUCKET}/index.yaml deploy/helm/index_dir/index.yaml
-          helm package -d deploy/helm/sync_dir deploy/helm/${REPO_NAME}
-          helm repo index --merge deploy/helm/index_dir/index.yaml deploy/helm/sync_dir
-          aws s3 sync deploy/helm/sync_dir s3://${S3_BUCKET}/
-          aws s3 cp deploy/helm/sync_dir/index.yaml s3://${S3_BUCKET}/index.yaml
+      - name: Package Helm chart
+        run: helm package -d deploy/helm deploy/helm/${REPO_NAME}
+      - name: Publish Helm chart to GitHub Container Registry
+        run: helm push "deploy/helm/${REPO_NAME}-${{ steps.release-version.outputs.version }}.tgz" oci://ghcr.io/magda-io/charts

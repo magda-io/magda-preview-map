@@ -9,19 +9,6 @@ env:
   REPO_NAME: magda-preview-map
 
 jobs:
-  compatibility-contract:
-    name: Magda preview compatibility contract
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Use Node.js 22
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: yarn
-      - run: yarn install --frozen-lockfile
-      - run: yarn test:characterization
-
   build-test:
     name: Build, test, and package TerriaMap
     runs-on: ubuntu-latest
@@ -50,6 +37,10 @@ jobs:
         run: yarn helm-lint
       - name: Render Helm chart
         run: helm template preview-map deploy/helm/magda-preview-map -f deploy/helm/test-deploy.yaml >/dev/null
+      - name: Check generated Helm README
+        run: |
+          yarn helm-docs
+          git diff --exit-code -- README.md
 
   container-build:
     name: Build Node 24 production image
