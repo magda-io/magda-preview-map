@@ -34,9 +34,8 @@ resources:
   limits:
     cpu: 250m
 
-# Exact origins allowed to embed the preview map and send start data.
-# Same-origin parents are always allowed.
 clientConfig:
+  # -- Exact origins allowed to embed the preview map and send start data. Same-origin parents are always allowed.
   parentMessageAllowedOrigins: []
 
 serverConfig:
