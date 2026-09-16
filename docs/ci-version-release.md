@@ -5,8 +5,6 @@ This guide describes how to publish `magda-preview-map` without mixing functiona
 - the multi-architecture image `ghcr.io/magda-io/magda-preview-map`;
 - the Helm chart `oci://ghcr.io/magda-io/charts/magda-preview-map`.
 
-Docker Hub and the legacy S3 Helm repository are not release targets.
-
 ## Version format
 
 Release tags and set-version workflow inputs use [Semantic Versioning](https://semver.org/) with a required leading `v`:
@@ -34,11 +32,11 @@ Examples include `v2.0.0-alpha.0`, `v2.0.0-rc.1`, and `v2.0.0`. `package.json` a
 ## Release flow
 
 ```text
-source branch
+source branch with green Main CI
   -> release/v<VERSION>
-  -> set-version workflow
-  -> branch CI
+  -> set-version workflow and release metadata commit
   -> GitHub Release targeting the release branch
+  -> release.yml validation and release-critical checks
   -> GHCR image + OCI Helm chart
   -> independent artifact verification
 ```
@@ -64,7 +62,7 @@ git switch -c release/v2.0.0-alpha.0
 git push -u origin release/v2.0.0-alpha.0
 ```
 
-The branch name and eventual GitHub tag should use the same leading-`v` version.
+The branch name and eventual GitHub tag should use the same leading-`v` version. This is a naming convention; the workflows do not enforce the release branch name.
 
 ### 3. Run the set-version workflow
 
@@ -79,16 +77,11 @@ The workflow:
 
 Do not manually add functional changes to this commit.
 
-### 4. Wait for release-branch CI
+### 4. Review the release metadata commit
 
-The version commit triggers the Main CI Workflow. Wait for all jobs to pass. CI runs:
+The functional source commit must have passed the Main CI Workflow before the release branch was created. The set-version workflow validates and commits only the release metadata described above.
 
-- Node 22 dependency installation, lint, unit/contract tests, and the production build;
-- Playwright iframe integration tests;
-- Helm dependency build, lint, render, and generated README consistency checking;
-- a non-publishing Node 24 container build.
-
-Do not create the GitHub Release while this CI run is failing or still in progress.
+The workflow pushes that commit using `GITHUB_TOKEN`, so the push does not trigger the normal `on: push` Main CI Workflow. This is intentional: no additional full Main CI run is required solely for the release metadata commit. Review the commit and confirm that it contains only the expected version and generated README changes before creating the GitHub Release.
 
 ### 5. Create the GitHub Release
 
