@@ -92,7 +92,7 @@ test("main CI runs characterization once and checks generated Helm docs", () => 
   );
   assert.match(workflow, /yarn helm-docs/);
   assert.match(workflow, /git diff --exit-code -- README\.md/);
-  assert.match(workflow, /platforms: linux\/amd64,linux\/arm64/);
+  assert.match(workflow, /docker\/build-push-action@v6/);
 });
 
 test("package, chart, and generated README versions stay aligned", () => {

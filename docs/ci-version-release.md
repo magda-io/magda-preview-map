@@ -86,7 +86,7 @@ The version commit triggers the Main CI Workflow. Wait for all jobs to pass. CI 
 - Node 22 dependency installation, lint, unit/contract tests, and the production build;
 - Playwright iframe integration tests;
 - Helm dependency build, lint, render, and generated README consistency checking;
-- a non-publishing Node 24 container build for `linux/amd64` and `linux/arm64`.
+- a non-publishing Node 24 container build.
 
 Do not create the GitHub Release while this CI run is failing or still in progress.
 
