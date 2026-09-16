@@ -20,7 +20,7 @@ v2.0.0-alpha.0
 └─ major
 ```
 
-Examples include `v2.0.0-alpha.0`, `v2.0.0-rc.1`, and `v2.0.0`. `package.json` and the Helm `Chart.yaml` store the same version without the leading `v`.
+Examples include `v2.0.0-alpha.0`, `v2.0.0-rc.1`, and `v2.0.0`. `package.json` and the Helm `Chart.yaml` store the same version without the leading `v`. Build metadata (`+...`) is not accepted because the version is also used as a Docker tag and Helm artifact version.
 
 ## Release principles
 

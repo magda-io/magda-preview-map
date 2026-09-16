@@ -1,7 +1,7 @@
 "use strict";
 
 const assert = require("node:assert/strict");
-const { execFileSync } = require("node:child_process");
+const { execFileSync, spawnSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 const test = require("node:test");
@@ -52,10 +52,29 @@ test("release workflow validates its tag against package and chart versions", ()
   assert.match(workflow, /RELEASE_TAG.*v\$\{CHART_VERSION\}/);
 });
 
+test("workflow semantic-version contract accepts only publishable tags", () => {
+  const workflow = read(".github/workflows/set-version.yaml");
+  const versionRegex = workflow.match(/SEMVER_REGEX="([^"]+)"/)[1];
+  const matches = (version) =>
+    spawnSync("bash", ["-c", '[[ "$1" =~ $2 ]]', "bash", version, versionRegex])
+      .status === 0;
+
+  for (const version of ["v0.0.0", "v2.0.0-alpha.0", "v1.2.3-rc.1"]) {
+    assert.equal(matches(version), true, `${version} should be accepted`);
+  }
+  for (const version of ["2.0.0", "v01.0.0", "v1.0.0-01", "v1.0.0+build.1"]) {
+    assert.equal(matches(version), false, `${version} should be rejected`);
+  }
+});
+
 test("set-version workflow requires tagged semver and regenerates Helm docs", () => {
   const workflow = read(".github/workflows/set-version.yaml");
+  const releaseWorkflow = read(".github/workflows/release.yml");
+  const versionRegex = workflow.match(/SEMVER_REGEX="([^"]+)"/)[1];
+  const releaseRegex = releaseWorkflow.match(/SEMVER_REGEX="([^"]+)"/)[1];
 
   assert.match(workflow, /SEMVER_REGEX="\^v/);
+  assert.equal(versionRegex, releaseRegex);
   assert.match(workflow, /yarn set-version "\$SELECTED_VERSION"/);
   assert.match(workflow, /yarn helm-docs/);
   assert.match(workflow, /git add package\.json[^\n]+Chart\.yaml README\.md/);

@@ -21,8 +21,8 @@ jobs:
         env:
           SELECTED_VERSION: ${{ inputs.version }}
         run: |
-          SEMVER_REGEX="^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(\-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$"
-          [[ "${SELECTED_VERSION}" =~ ${SEMVER_REGEX} ]] || { echo "Invalid version '${SELECTED_VERSION}': expected semantic version with leading v, for example v2.0.0-alpha.0."; exit 1; }
+          SEMVER_REGEX="^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(\-(0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(\.(0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*)?$"
+          [[ "${SELECTED_VERSION}" =~ ${SEMVER_REGEX} ]] || { echo "Invalid version '${SELECTED_VERSION}': expected publishable semantic version with leading v and no build metadata, for example v2.0.0-alpha.0."; exit 1; }
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.ref_name }}

@@ -5,10 +5,10 @@ const path = require("node:path");
 
 const inputVersion = process.argv[2] || "";
 const taggedSemanticVersion =
-  /^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
+  /^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*))*)?$/;
 if (!taggedSemanticVersion.test(inputVersion)) {
   throw new Error(
-    `Invalid version: ${inputVersion || "<missing>"}. Expected semantic version with a leading v.`
+    `Invalid version: ${inputVersion || "<missing>"}. Expected publishable semantic version with a leading v and no build metadata.`
   );
 }
 const version = inputVersion.slice(1);

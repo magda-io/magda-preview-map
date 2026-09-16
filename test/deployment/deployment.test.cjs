@@ -132,16 +132,25 @@ test("version utility updates package and Helm chart together", () => {
       "apiVersion: v2\nname: fixture\nversion: 1.0.0\n"
     );
 
-    const untaggedVersion = spawnSync(
-      process.execPath,
-      [path.join(temporaryRoot, "scripts", "set-version.cjs"), "2.0.0-alpha.1"],
-      { encoding: "utf8" }
-    );
-    assert.notEqual(untaggedVersion.status, 0);
-    assert.match(
-      untaggedVersion.stderr,
-      /Expected semantic version with a leading v/
-    );
+    for (const invalidVersion of [
+      "2.0.0-alpha.1",
+      "v1.0.0-01",
+      "v1.0.0+build.1"
+    ]) {
+      const result = spawnSync(
+        process.execPath,
+        [
+          path.join(temporaryRoot, "scripts", "set-version.cjs"),
+          invalidVersion
+        ],
+        { encoding: "utf8" }
+      );
+      assert.notEqual(result.status, 0, `${invalidVersion} should be rejected`);
+      assert.match(
+        result.stderr,
+        /Expected publishable semantic version with a leading v/
+      );
+    }
     assert.equal(
       JSON.parse(
         fs.readFileSync(path.join(temporaryRoot, "package.json"), "utf8")
