@@ -8,7 +8,7 @@ global:
 # You can set `imagePullSecret` value to `false` (bool) to reset the value (see example below)
 
 defaultImage:
-  repository: docker.io/data61
+  repository: ghcr.io/magda-io
   pullPolicy: IfNotPresent
   imagePullSecret: false
 

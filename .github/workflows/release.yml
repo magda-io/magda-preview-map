@@ -74,17 +74,27 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Configure AWS credentials
+      - name: Package Helm chart
+        id: helm-package
+        run: |
+          mkdir -p deploy/helm/sync_dir
+          helm package -d deploy/helm/sync_dir deploy/helm/${REPO_NAME}
+          CHART_PACKAGE=(deploy/helm/sync_dir/${REPO_NAME}-*.tgz)
+          test "${#CHART_PACKAGE[@]}" -eq 1
+          echo "package=${CHART_PACKAGE[0]}" >> "$GITHUB_OUTPUT"
+      - name: Publish Helm chart to GitHub Container Registry
+        run: helm push "${{ steps.helm-package.outputs.package }}" oci://ghcr.io/magda-io/charts
+
+      - name: Configure AWS credentials for compatibility publication
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ap-southeast-2
-      - name: Publish Helm chart to the existing repository
+      - name: Publish Helm chart to additional S3 compatibility repository
         run: |
-          mkdir -p deploy/helm/sync_dir deploy/helm/index_dir
+          mkdir -p deploy/helm/index_dir
           aws s3 cp s3://${S3_BUCKET}/index.yaml deploy/helm/index_dir/index.yaml
-          helm package -d deploy/helm/sync_dir deploy/helm/${REPO_NAME}
           helm repo index --merge deploy/helm/index_dir/index.yaml deploy/helm/sync_dir
           aws s3 sync deploy/helm/sync_dir s3://${S3_BUCKET}/
           aws s3 cp deploy/helm/sync_dir/index.yaml s3://${S3_BUCKET}/index.yaml
