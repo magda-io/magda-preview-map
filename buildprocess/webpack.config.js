@@ -11,7 +11,7 @@ const HtmlPlugin = require("html-webpack-plugin");
 /**
  * Webpack config for building terriamap
  */
-module.exports = function ({ devMode, baseHref = "/" }) {
+module.exports = function ({ devMode, baseHref = "" }) {
   // Base configuration
   const config = {
     mode: devMode ? "development" : "production",

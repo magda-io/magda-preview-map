@@ -24,7 +24,10 @@ const getBaseHref = () => {
   // Arguments written in skewer-case can cause problems (unsure why), so stick to camelCase
   var options = minimist(process.argv.slice(2), {
     string: ["baseHref"],
-    default: { baseHref: "/" }
+    // Empty by default so no <base> tag is emitted and relative asset URLs
+    // resolve against the serving path — required for serving under a path
+    // prefix such as Magda's gateway (/preview-map/). Pass --baseHref to set one.
+    default: { baseHref: "" }
   });
 
   return options.baseHref;
