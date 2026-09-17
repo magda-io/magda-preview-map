@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@magda/preview-map",
-  "version": "1.1.2",
+  "version": "2.0.0-alpha.1",
   "description": "Magda geospatial preview based on TerriaMap.",
   "license": "Apache-2.0",
   "engines": {
