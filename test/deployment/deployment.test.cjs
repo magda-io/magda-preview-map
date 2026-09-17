@@ -199,3 +199,21 @@ test("version utility updates package and Helm chart together", () => {
     fs.rmSync(temporaryRoot, { recursive: true, force: true });
   }
 });
+
+test("index template stays prefix-safe: no absolute <base> unless configured", () => {
+  // html-webpack-plugin renders wwwroot/index.ejs with lodash templating.
+  const render = require("lodash/template")(read("wwwroot/index.ejs"));
+
+  // Default build (empty baseHref) must emit NO <base> tag, so the relative
+  // build/ asset URLs resolve against the serving path. An absolute
+  // <base href="/"> would send assets to the origin root and the client would
+  // fail to boot when served under a path prefix such as Magda's gateway
+  // (/preview-map/) — the TerriaJS 8 upgrade's default regressed exactly this.
+  assert.doesNotMatch(render({ baseHref: "" }), /<base\b/);
+
+  // An explicit baseHref is still honoured for deployments that want one.
+  assert.match(
+    render({ baseHref: "/preview-map/" }),
+    /<base href="\/preview-map\/"\s*\/>/
+  );
+});

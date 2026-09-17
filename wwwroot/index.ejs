@@ -1,7 +1,15 @@
 <!DOCTYPE html>
 <html lang="en" class="terria">
   <head>
-    <base href="<%= baseHref %>" />
+    <%
+      /* Only emit an absolute <base> when one is explicitly configured. An
+         absolute href="/" breaks asset resolution when this app is served under
+         a path prefix (e.g. Magda's gateway serves it at /preview-map/), because
+         the relative build/ asset URLs then resolve against the origin root.
+         With no <base>, relative assets resolve against the serving path and
+         work under any mount — matching pre-TerriaJS-8 behaviour. */
+    %><% if (baseHref) { %><base href="<%= baseHref %>" />
+    <% } %>
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1" />
     <!-- Use Chrome Frame in IE -->
