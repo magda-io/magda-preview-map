@@ -1,7 +1,7 @@
 apiVersion: v2
 description: A Helm chart for Magda Preview Map module - forked from Terria Map Repo
 name: magda-preview-map
-version: 1.1.2
+version: 2.0.0-alpha.2
 kubeVersion: ">= 1.14.0-0"
 home: "https://github.com/magda-io/magda-preview-map"
 sources: [ "https://github.com/magda-io/magda-preview-map" ]
