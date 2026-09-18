@@ -48,6 +48,16 @@ jobs:
         run: yarn test
       - name: Build production application
         run: yarn build:production
+      - name: Assert built client is prefix-safe (no absolute base href)
+        run: |
+          # The production default must emit NO absolute <base href="/">, or the
+          # relative build/ assets break when served under a path prefix such as
+          # Magda's gateway (/preview-map/). Guards against the build default
+          # (gulp/webpack) regressing back to "/" — see #49.
+          if grep -q '<base href="/"' wwwroot/index.html; then
+            echo "::error::built wwwroot/index.html contains an absolute <base href=\"/\">, which breaks path-prefixed serving"
+            exit 1
+          fi
       - name: Lint Helm chart
         run: yarn helm-lint
       - name: Render Helm chart
