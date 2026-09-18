@@ -81,6 +81,25 @@ export function cleanOwsUrl(resourceUrl: string): string {
   return url.toString();
 }
 
+/**
+ * Resolve the Magda base url into an absolute base suitable for `new URL(path, base)`.
+ *
+ * Magda's default `config.baseUrl` is the relative `"/"` (same-origin), which the
+ * web client forwards as the magda-item `url`. Passing a relative value straight
+ * to the `URL` constructor as a base throws `Invalid base URL`, so a relative base
+ * is resolved against the app's own location; an absolute base is used as-is.
+ */
+function resolveMagdaBaseUrl(baseUrl: string): string {
+  const withTrailingSlash = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
+  const locationHref =
+    typeof globalThis !== "undefined" && globalThis.location
+      ? globalThis.location.href
+      : undefined;
+  return locationHref
+    ? new URL(withTrailingSlash, locationHref).toString()
+    : withTrailingSlash;
+}
+
 export function buildRegistryRecordUrl(
   properties: MagdaPreviewProperties
 ): string {
@@ -91,7 +110,7 @@ export function buildRegistryRecordUrl(
 
   const url = new URL(
     `api/v0/registry/records/${encodeURIComponent(recordId)}`,
-    properties.url.endsWith("/") ? properties.url : `${properties.url}/`
+    resolveMagdaBaseUrl(properties.url)
   );
   if (properties.distributionId) {
     url.searchParams.set("aspect", "dcat-distribution-strings");

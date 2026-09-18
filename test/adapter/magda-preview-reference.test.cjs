@@ -84,6 +84,30 @@ test("builds current distribution and legacy dataset Registry requests", () => {
   assert.equal(datasetUrl.searchParams.get("dereference"), "true");
 });
 
+test("resolves a relative magda base (config.baseUrl '/') against the app origin", () => {
+  // Magda's default `config.baseUrl` is the relative "/" (same-origin). The web
+  // client passes it as the magda-item `url`, so buildRegistryRecordUrl must not
+  // feed it straight to `new URL(path, "/")` (which throws "Invalid base URL").
+  const previous = globalThis.location;
+  globalThis.location = {
+    href: "https://preview.example.test/preview-map/index.html"
+  };
+  try {
+    const url = new URL(
+      compatibility.buildRegistryRecordUrl(properties({ url: "/" }))
+    );
+    assert.equal(url.origin, "https://preview.example.test");
+    assert.equal(url.pathname, "/api/v0/registry/records/dist-id");
+    assert.equal(url.searchParams.get("aspect"), "dcat-distribution-strings");
+  } finally {
+    if (previous === undefined) {
+      delete globalThis.location;
+    } else {
+      globalThis.location = previous;
+    }
+  }
+});
+
 test("dataset-format overrides DCAT and downloadURL precedes accessURL", () => {
   const resolved = compatibility.definitionFromDistribution(
     distribution("application/pdf", "https://files.example.test/data.geojson", {
