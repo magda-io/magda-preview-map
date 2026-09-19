@@ -4,6 +4,11 @@
 
 ## Unreleased — TerriaMap v0.4.8 / TerriaJS 8
 
+- Fixed `magda-item` previews failing with `Invalid base URL` when Magda's
+  `config.baseUrl` is the default relative `/`: the magda-item base url is now
+  resolved against the app origin before building the Registry record request,
+  so all previews (WMS/WFS/ArcGIS/GeoJSON/CSV/KML/KMZ) work under a same-origin
+  (relative baseUrl) deployment, not only when an absolute baseUrl is supplied.
 - Rebased the application/build foundation on TerriaMap v0.4.8, TerriaJS 8.13,
   React 18, Webpack 5, Babel 7, TypeScript 5, and Node 22+ tooling.
 - Replaced the TerriaJS 6 custom catalog item with a thin `magda-item`

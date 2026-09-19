@@ -84,6 +84,75 @@ test("builds current distribution and legacy dataset Registry requests", () => {
   assert.equal(datasetUrl.searchParams.get("dereference"), "true");
 });
 
+test("resolves a relative magda base (config.baseUrl '/') against the app origin", () => {
+  // Magda's default `config.baseUrl` is the relative "/" (same-origin). The web
+  // client passes it as the magda-item `url`, so buildRegistryRecordUrl must not
+  // feed it straight to `new URL(path, "/")` (which throws "Invalid base URL").
+  const previous = globalThis.location;
+  globalThis.location = {
+    href: "https://preview.example.test/preview-map/index.html"
+  };
+  try {
+    const url = new URL(
+      compatibility.buildRegistryRecordUrl(properties({ url: "/" }))
+    );
+    assert.equal(url.origin, "https://preview.example.test");
+    assert.equal(url.pathname, "/api/v0/registry/records/dist-id");
+    assert.equal(url.searchParams.get("aspect"), "dcat-distribution-strings");
+  } finally {
+    if (previous === undefined) {
+      delete globalThis.location;
+    } else {
+      globalThis.location = previous;
+    }
+  }
+});
+
+test("relative base '/' ignores a non-root UI path (uiBaseUrl) and targets the origin API root", () => {
+  // When the web UI is hosted under a non-"/" path (web-server `uiBaseUrl`,
+  // e.g. "/xxx/test-ui/"), the preview iframe's location is under that prefix,
+  // but Magda's API base is still origin-root ("/"). The UI prefix must NOT
+  // leak into the Registry request.
+  const previous = globalThis.location;
+  globalThis.location = {
+    href: "https://preview.example.test/xxx/test-ui/preview-map/index.html"
+  };
+  try {
+    const url = new URL(
+      compatibility.buildRegistryRecordUrl(properties({ url: "/" }))
+    );
+    assert.equal(
+      url.toString().split("?")[0],
+      "https://preview.example.test/api/v0/registry/records/dist-id"
+    );
+  } finally {
+    if (previous === undefined) delete globalThis.location;
+    else globalThis.location = previous;
+  }
+});
+
+test("relative base carrying a deployment path prefix keeps that prefix", () => {
+  // If the whole Magda deployment is served under a path prefix, config.baseUrl
+  // is that absolute-path prefix (e.g. "/xxx/test-ui/") and the Registry lives
+  // under it. Resolving against the app origin must preserve the prefix.
+  const previous = globalThis.location;
+  globalThis.location = {
+    href: "https://preview.example.test/xxx/test-ui/preview-map/index.html"
+  };
+  try {
+    const url = new URL(
+      compatibility.buildRegistryRecordUrl(properties({ url: "/xxx/test-ui/" }))
+    );
+    assert.equal(
+      url.toString().split("?")[0],
+      "https://preview.example.test/xxx/test-ui/api/v0/registry/records/dist-id"
+    );
+  } finally {
+    if (previous === undefined) delete globalThis.location;
+    else globalThis.location = previous;
+  }
+});
+
 test("dataset-format overrides DCAT and downloadURL precedes accessURL", () => {
   const resolved = compatibility.definitionFromDistribution(
     distribution("application/pdf", "https://files.example.test/data.geojson", {
