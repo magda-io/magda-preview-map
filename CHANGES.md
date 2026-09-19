@@ -2,7 +2,7 @@
 
 > The repo was part of [magda main repo](https://github.com/magda-io/magda). For history before v0.0.58, please check [CHANGES.md of main repo](https://github.com/magda-io/magda/blob/master/CHANGES.md).
 
-## Unreleased — TerriaMap v0.4.8 / TerriaJS 8
+## 2.0.0
 
 - Fixed `magda-item` previews failing with `Invalid base URL` when Magda's
   `config.baseUrl` is the default relative `/`: the magda-item base url is now
