@@ -11,17 +11,25 @@ const root = path.resolve(__dirname, "../..");
 const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
 const { mergeConfig } = require("../../scripts/start-preview-server.cjs");
 
-test("production Dockerfiles use Node 24 and terriajs-server v5 entrypoint", () => {
-  for (const file of ["Dockerfile", "deploy/docker/Dockerfile"]) {
-    const dockerfile = read(file);
-    assert.match(dockerfile, /FROM node:24-bookworm-slim/);
-    assert.match(
-      dockerfile,
-      /ENTRYPOINT \["node", "scripts\/start-preview-server\.cjs"\]/
-    );
-    assert.doesNotMatch(dockerfile, /node:(?:6|10)\b/);
-    assert.doesNotMatch(dockerfile, /terriajs-server\/lib\/app\.js/);
-  }
+test("root Dockerfile is the canonical Node 24 / terriajs-server v5 image", () => {
+  const dockerfile = read("Dockerfile");
+  assert.match(dockerfile, /FROM node:24-bookworm-slim/);
+  assert.match(
+    dockerfile,
+    /ENTRYPOINT \["node", "scripts\/start-preview-server\.cjs"\]/
+  );
+  assert.doesNotMatch(dockerfile, /node:(?:6|10)\b/);
+  assert.doesNotMatch(dockerfile, /terriajs-server\/lib\/app\.js/);
+
+  // The repository-root Dockerfile is the single canonical production image
+  // definition. The obsolete `deploy/docker/Dockerfile` compatibility copy has
+  // been removed (see #47) so runtime/security changes cannot drift between two
+  // hand-edited files.
+  assert.equal(
+    fs.existsSync(path.join(root, "deploy/docker/Dockerfile")),
+    false,
+    "obsolete deploy/docker/Dockerfile compatibility copy must not be reintroduced"
+  );
 
   const pkg = JSON.parse(read("package.json"));
   assert.equal(pkg.dependencies["terriajs-server"], "5.0.0");
