@@ -8,7 +8,10 @@ returns a native TerriaJS 8 target model; it does not implement data loaders.
 
 - `distributionId` requests `dcat-distribution-strings` with optional
   `dataset-format`.
-- Legacy `datasetId` requests dereferenced `dataset-distributions`.
+- `datasetId` requests dereferenced `dataset-distributions` and picks one
+  distribution by the preview format preference: WMS, Esri MapServer, WFS,
+  Esri FeatureServer, GeoJSON, CSV, KML/KMZ, CZML. Equally preferred
+  distributions keep Registry order. `distributionId` loads stay exact.
 - `dataset-format.format` overrides the DCAT format when present.
 - `downloadURL` wins over `accessURL`.
 - `magda://storage-api/` URLs use
@@ -28,6 +31,29 @@ GeoJSON path without disabling modern tiled requests.
 
 Legacy `isEnabled` is bridged to `terria.workbench.add`, which dereferences and
 loads the target. `zoomOnEnable` maps to `zoomOnAddToWorkbench`.
+
+## Full-map Magda catalog
+
+In the full map (any `mode` other than `preview`), start data from the Magda
+opener gains one `magda-catalog-group` root, `magda-data-catalog`, named
+"Magda data catalog". It copies `url`, `storageApiUrl` and the bucket settings
+from the incoming `magda-item`, is never enabled, and is not added when the
+root already exists. The compact preview's start data is unchanged.
+
+`MagdaCatalogGroup` only discovers datasets:
+
+- nothing is requested until the group is expanded in the Explorer;
+- each expansion loads one Registry page:
+  `api/v0/registry/records?aspect=dcat-dataset-strings&limit=50`, same-origin
+  and unproxied, so the Registry applies the viewer's own read permissions;
+- each record becomes a `magda-item` with `datasetId` and the deterministic ID
+  `magda-data-catalog/dataset/<encoded record ID>`, resolved by the rules above
+  only when the user adds it;
+- when the Registry reports more records, a lazy "More datasets…" group loads
+  the next page with `pageToken`.
+
+The deprecated upstream `magda` type is not registered. See the
+[design](design/full-map-magda-catalog-design.md).
 
 ## Basemap compatibility
 

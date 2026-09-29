@@ -27,10 +27,19 @@ function compile(file, localRequire = require) {
 const compatibility = compile(
   path.join(root, "lib/Models/magdaPreviewCompatibility.ts")
 );
+const catalog = compile(
+  path.join(root, "lib/Models/magdaCatalog.ts"),
+  (request) =>
+    request === "./magdaPreviewCompatibility" ? compatibility : require(request)
+);
+class BaseModel {}
 const lifecycle = compile(
   path.join(root, "lib/Models/MagdaPreviewLifecycle.ts"),
   (request) => {
     if (request === "./magdaPreviewCompatibility") return compatibility;
+    if (request === "./magdaCatalog") return catalog;
+    if (request === "terriajs/lib/Models/Definition/Model")
+      return { BaseModel };
     if (request === "terriajs/lib/Core/TerriaError") {
       return { TerriaErrorSeverity: { Error: 0, Warning: 1 } };
     }
@@ -46,7 +55,12 @@ function deferred() {
   return { promise, resolve };
 }
 
-function harness({ allowedOrigins = [], update } = {}) {
+function harness({
+  allowedOrigins = [],
+  update,
+  mode = "preview",
+  models = []
+} = {}) {
   const messages = [];
   const parent = {
     postMessage(data, targetOrigin) {
@@ -65,6 +79,12 @@ function harness({ allowedOrigins = [], update } = {}) {
   };
   const terria = {
     configParameters: { parentMessageAllowedOrigins: allowedOrigins },
+    // `mode: null` means the URL carries no mode at all.
+    userProperties: new Map(mode === null ? [] : [["mode", mode]]),
+    getModelById(type, id) {
+      assert.equal(type, BaseModel);
+      return models.includes(id) ? {} : undefined;
+    },
     updateFromStartData: update || (async () => result()),
     raiseErrorToUser() {}
   };
@@ -376,4 +396,97 @@ test("an already-loaded item still terminates after accepted start data", async 
     h.messages.at(-1).targetOrigin,
     "https://catalog.example.test"
   );
+});
+
+// #55: the full map (no `mode=preview`) gains the lazy Magda catalog root.
+function catalogRoots(startData) {
+  return startData.initSources.flatMap((source) =>
+    (source.catalog || []).filter((item) => item.type === "magda-catalog-group")
+  );
+}
+
+function deploymentStartData() {
+  const startData = magdaStartData("Opened dataset");
+  Object.assign(startData.initSources[0].catalog[0], {
+    url: "/some-prefix/",
+    storageApiUrl: "/some-prefix/api/v0/storage/",
+    defaultBucket: "custom-bucket",
+    zoomOnEnable: true
+  });
+  return startData;
+}
+
+async function receivedStartData(options, data = deploymentStartData()) {
+  const received = [];
+  const h = harness({
+    ...options,
+    update: async (startData) => {
+      received.push(startData);
+      return result();
+    }
+  });
+  await h.dispatch({
+    origin: "https://preview.example.test",
+    source: h.parent,
+    data
+  });
+  return { received, h };
+}
+
+test("compact preview start data is passed through without a catalog", async () => {
+  const data = deploymentStartData();
+  const { received } = await receivedStartData({ mode: "preview" }, data);
+  assert.equal(received[0], data);
+  assert.deepEqual(catalogRoots(received[0]), []);
+});
+
+for (const mode of [null, "full"]) {
+  test(`full map (mode=${mode}) receives exactly one lazy catalog root`, async () => {
+    const data = deploymentStartData();
+    const original = JSON.parse(JSON.stringify(data));
+    const { received } = await receivedStartData({ mode }, data);
+
+    assert.deepEqual(data, original, "incoming start data is not mutated");
+    const [catalogItem, root] = received[0].initSources[0].catalog;
+    assert.deepEqual(catalogItem, original.initSources[0].catalog[0]);
+    assert.deepEqual(root, {
+      id: "magda-data-catalog",
+      type: "magda-catalog-group",
+      name: "Magda data catalog",
+      url: "/some-prefix/",
+      storageApiUrl: "/some-prefix/api/v0/storage/",
+      defaultBucket: "custom-bucket",
+      pageSize: 50
+    });
+    assert.equal("isEnabled" in root, false);
+    assert.equal("zoomOnEnable" in root, false);
+  });
+}
+
+test("repeated full-map start data does not duplicate the catalog root", async () => {
+  const { received } = await receivedStartData({
+    mode: null,
+    models: ["magda-data-catalog"]
+  });
+  assert.deepEqual(catalogRoots(received[0]), []);
+});
+
+test("the lazy catalog root does not change magda-item completion", async () => {
+  const update = deferred();
+  const h = harness({ mode: null, update: () => update.promise });
+  const processing = h.dispatch({
+    origin: "https://preview.example.test",
+    source: h.parent,
+    data: deploymentStartData()
+  });
+  const generation = lifecycle.beginMagdaPreviewItemLoad(h.terria);
+  update.resolve(result());
+  await processing;
+  await Promise.resolve();
+  assert.deepEqual(h.messages, []);
+
+  lifecycle.finishMagdaPreviewItemLoad(h.terria, generation);
+  assert.deepEqual(h.messages, [
+    { data: "loading complete", targetOrigin: "https://preview.example.test" }
+  ]);
 });

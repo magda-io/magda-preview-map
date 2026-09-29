@@ -89,7 +89,7 @@ export function cleanOwsUrl(resourceUrl: string): string {
  * to the `URL` constructor as a base throws `Invalid base URL`, so a relative base
  * is resolved against the app's own location; an absolute base is used as-is.
  */
-function resolveMagdaBaseUrl(baseUrl: string): string {
+export function resolveMagdaBaseUrl(baseUrl: string): string {
   const withTrailingSlash = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
   const locationHref =
     typeof globalThis !== "undefined" && globalThis.location
@@ -211,15 +211,41 @@ export function definitionFromDistribution(
   return undefined;
 }
 
+/**
+ * Dataset-level preference, aligned with the Magda web client's preview
+ * ordering. Lower index wins; distributions of equal rank keep Registry order.
+ */
+export const DATASET_DEFINITION_TYPE_PREFERENCE: readonly string[] = [
+  "wms",
+  "esri-mapServer",
+  "wfs",
+  "esri-featureServer",
+  "geojson",
+  "csv",
+  "kml",
+  "czml"
+];
+
+function definitionRank(definition: MagdaPreviewDefinition): number {
+  const rank = DATASET_DEFINITION_TYPE_PREFERENCE.indexOf(definition.type);
+  return rank === -1 ? DATASET_DEFINITION_TYPE_PREFERENCE.length : rank;
+}
+
 export function findCompatibleDefinition(
   record: MagdaPreviewRecord,
   properties: MagdaPreviewProperties
 ): MagdaPreviewDefinition | undefined {
+  let best: MagdaPreviewDefinition | undefined;
   for (const distribution of distributionsFromRecord(record)) {
     const definition = definitionFromDistribution(distribution, properties);
-    if (definition) return definition;
+    if (!definition) continue;
+    // A distribution record resolves to itself; only dataset-level lookups
+    // choose between several candidates.
+    if (!best || definitionRank(definition) < definitionRank(best)) {
+      best = definition;
+    }
   }
-  return undefined;
+  return best;
 }
 
 export function isFeatureServerRoot(url: string): boolean {
