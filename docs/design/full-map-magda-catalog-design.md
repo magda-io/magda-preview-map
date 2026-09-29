@@ -1,40 +1,258 @@
-# Built-in full-map Magda catalog design
+# Built-in full-map and Magda catalog design
 
-Issue: [#55](https://github.com/magda-io/magda-preview-map/issues/55)  
-Parent design: [#53](https://github.com/magda-io/magda-preview-map/issues/53)  
+Issues: [#53](https://github.com/magda-io/magda-preview-map/issues/53) and [#55](https://github.com/magda-io/magda-preview-map/issues/55)  
+Related completed stopgap: [#54](https://github.com/magda-io/magda-preview-map/issues/54)  
 Related CSP investigation: [#56](https://github.com/magda-io/magda-preview-map/issues/56)
 
 ## Status
 
-**Decision: pursue the catalog enhancement, but do not implement it by registering TerriaJS's deprecated `MagdaReference` as a registry-root group.**
+This document is the implementation design for the complete path from the **current state** to the intended built-in full-map experience.
 
-The recommended implementation is a small local, lazy `magda-catalog-group` model. It lists Magda dataset records from the deployment's Registry API and creates child references using the existing `MagdaPreviewReference` / `magda-item` compatibility layer.
+Implementation order is mandatory:
 
-The catalog group is injected only into the **built-in full-map** start data. It is not enabled in compact preview mode and is not added to the workbench. The original dataset continues to auto-load and zoom exactly as it does today.
+1. **Phase 1 — #53: restore the button as “Open full map” and open the built-in `magda-preview-map` in full mode.**
+2. **Phase 2 — #55: expose a lazy Magda data catalog inside that full-map view.**
 
-This design keeps the new functionality inside the existing Magda compatibility seam, avoids depending on a deprecated TerriaJS model, preserves user-specific access control, and avoids loading the catalog during initial map startup.
+#55 must not be implemented on the assumption that #53 already exists.
+
+For the catalog portion, **do not implement it by registering TerriaJS's deprecated `MagdaReference` as a registry-root group.** The recommended implementation is a small local, lazy `magda-catalog-group` model. It lists Magda dataset records from the deployment's Registry API and creates child references using the existing `MagdaPreviewReference` / `magda-item` compatibility layer.
+
+The catalog group is injected only into the built-in full-map start data. It is not enabled in compact preview mode and is not added to the workbench. The originally opened dataset continues to auto-load and zoom.
 
 ## Goals
 
-1. Make the deployment's Magda datasets visible in Terria's full-view Explorer / Add Data UI.
-2. Let a user add a second Magda dataset while keeping the dataset that opened the full map loaded.
-3. Reuse the current `magda-item` resolution path for WMS, WFS, Esri, GeoJSON, CSV, KML/KMZ, and other formats already supported by the preview adapter.
-4. Keep initial full-map rendering independent of catalog size.
-5. Respect Magda Registry authorization: anonymous users see only records they can read; signed-in users see records allowed by their session.
-6. Work for same-origin Magda deployments, including non-root deployments already handled by the `magda-item` base-URL logic.
+1. Reintroduce the currently hidden button as **“Open full map”** when no external TerriaMap target is configured.
+2. Open the same `magda-preview-map` application without compact preview chrome and pass the currently previewed dataset to it.
+3. Preserve the explicitly configured external-TerriaMap path for operators who use one.
+4. Make the deployment's Magda datasets visible in Terria's full-view Explorer / Add Data UI.
+5. Let a user add a second Magda dataset while keeping the dataset that opened the full map loaded.
+6. Reuse the current `magda-item` resolution path for WMS, WFS, Esri, GeoJSON, CSV, KML/KMZ, and other formats already supported by the preview adapter.
+7. Keep initial full-map rendering independent of catalog size.
+8. Respect Magda Registry authorization: anonymous users see only records they can read; signed-in users see records allowed by their session.
+9. Work for same-origin Magda deployments, including non-root deployments already handled by the `magda-item` base-URL logic.
 
 ## Non-goals
 
-This issue should not:
+This work should not:
 
 - replace the existing `magda-item` contract;
 - change the compact embedded preview;
+- remove the configured external-TerriaMap compatibility path;
 - add a second Magda data-loading implementation;
 - add client-side access-control rules;
 - eagerly materialize the whole Magda catalog;
 - implement a new Terria-wide remote search provider;
-- broaden CSP for unrelated full-map features (tracked by #56);
-- change the Magda web-client protocol beyond the #53 full-map handshake.
+- broaden CSP for unrelated full-map features (tracked by #56).
+
+## Current state before implementation
+
+### #54 is already complete
+
+The former `nationalmap.gov.au` fallback has already been removed. In the current Magda web client, `DataPreviewMapOpenInNationalMapButton` renders only when `openInExternalTerriaMapTargetUrl` resolves to a configured external target.
+
+Therefore the default current behavior is:
+
+```text
+openInExternalTerriaMapTargetUrl empty
+        |
+        v
+button hidden
+```
+
+#53 must deliberately reverse that stopgap behavior:
+
+```text
+openInExternalTerriaMapTargetUrl empty
+        |
+        v
+show "Open full map"
+        |
+        v
+open config.previewMapBaseUrl in full mode
+```
+
+When `openInExternalTerriaMapTargetUrl` is configured, retain the current external path.
+
+### The preview-map side is already capable of full mode
+
+`configurePreviewMode.ts` only hides Terria chrome when:
+
+```text
+mode=preview
+```
+
+When that user property is absent (or an explicit non-preview mode is used), the same application retains normal Terria chrome, including workbench and Explorer.
+
+This means #53 does **not** require a second application or bundle.
+
+### The opener lifecycle support is already present
+
+`MagdaPreviewLifecycle` currently:
+
+- posts outbound lifecycle messages to both `window.parent` and `window.opener`;
+- accepts start data from either parent or opener when source and origin checks pass;
+- sends `"ready"`;
+- sends `"loading complete"` after the `magda-item` load completes;
+- sends the existing JSON error payload on terminal failure.
+
+For the built-in same-origin path, the preview-map implementation should mainly add regression tests and any small hardening required by those tests rather than inventing a second handshake.
+
+## Phase 1 — implement #53: built-in “Open full map”
+
+### Web-client behavior
+
+The bulk of #53 belongs in the Magda web client.
+
+Update `DataPreviewMapOpenInNationalMapButton.tsx` so the button has two explicit modes:
+
+| Configuration | Button behavior |
+| --- | --- |
+| `openInExternalTerriaMapTargetUrl` empty | show **Open full map** and open the built-in `previewMapBaseUrl` |
+| `openInExternalTerriaMapTargetUrl` set | preserve the current external-TerriaMap behavior |
+
+The button must no longer derive visibility from `!!externalTargetUrl`. It should remain subject to the existing browser-support and caller-level hide conditions.
+
+The existing Storage API “hide button” behavior in `DataPreviewMap.tsx` is not changed by #53 unless separately agreed.
+
+### Built-in target URL
+
+For the built-in path, open:
+
+```text
+config.previewMapBaseUrl
+```
+
+without `mode=preview`.
+
+An explicit `#mode=full` may be used if desired for readability, but it is not required by current `configurePreviewMode`: anything other than `mode=preview` leaves full Terria chrome available.
+
+Do not open the embedded URL:
+
+```text
+#mode=preview&hideExplorerPanel=1
+```
+
+because that intentionally hides the UI required by #53/#55.
+
+### Reuse the embedded `magda-item` payload
+
+The built-in path must send the **same Magda-specific payload shape used by the embedded preview**, not the legacy external Terria payload.
+
+Today the embedded `DataPreviewMapTerria.createCatalogItemFromDistribution(...)` includes important fields such as:
+
+```text
+type: magda-item
+url
+storageApiUrl
+distributionId
+defaultBucket
+isEnabled
+zoomOnEnable
+selectedWmsLayerName / selectedWfsFeatureTypeName
+homeCamera
+```
+
+By contrast, `DataPreviewMapOpenInNationalMapButton.createCatalogItemFromDistribution()` currently builds external-target payloads and should not become the source of truth for the built-in path.
+
+Recommended refactor in the Magda web client:
+
+```text
+createMagdaPreviewStartData(distribution, selected WMS/WFS choice)
+        |
+        +-- embedded iframe preview
+        |
+        +-- built-in full-map opener
+```
+
+Keep the legacy external payload builder separate.
+
+This avoids the embedded preview and full-map button drifting in storage URL, bucket, WMS/WFS selection, basemap, or future compatibility fields.
+
+### Selected WMS/WFS member
+
+The button component currently receives only the distribution. The embedded preview wrapper owns the selected WMS/WFS layer/feature-type state.
+
+For the built-in full map to render *identically* to the embedded preview, pass that selected value into the button (or pass already-built start data) so the built-in payload contains:
+
+```text
+selectedWmsLayerName
+```
+
+or:
+
+```text
+selectedWfsFeatureTypeName
+```
+
+when applicable.
+
+Do not silently fall back to a different member merely because the user opened the full view.
+
+### Opener handshake
+
+Built-in flow:
+
+```text
+dataset page
+    |
+    | user clicks Open full map
+    v
+window.open(previewMapBaseUrl)
+    |
+    | full map -> opener: "ready"
+    v
+web client
+    |
+    | opener -> full map: embedded-equivalent magda-item start data
+    v
+MagdaPreviewLifecycle
+    |
+    | updateFromStartData
+    | magda-item resolves and enters workbench
+    v
+full Terria map
+```
+
+Keep the popup reference and require incoming `"ready"` to come from that exact window.
+
+For the built-in path, prefer a concrete target origin derived from `previewMapBaseUrl` rather than `"*"`. The external legacy path can retain its existing compatibility behavior unless changed separately.
+
+### Button text and popup handling
+
+Default built-in label:
+
+```text
+Open full map
+```
+
+`openInExternalTerriaMapButtonText` continues to override the label in both modes.
+
+The popup-blocked message should be generic to “full map” / “map” rather than naming the discontinued NationalMap service.
+
+### Preview-map responsibilities for #53
+
+In `magda-preview-map`:
+
+- retain full Terria chrome whenever `mode=preview` is not selected;
+- retain the existing opener source/origin validation;
+- retain `ready` / `loading complete` / error semantics;
+- add explicit tests for the same-origin opener path;
+- document the built-in full-map entry contract.
+
+Do not add a separate “full map application”.
+
+### #53 acceptance criteria
+
+- [ ] With no external target configured, the button is visible and defaults to “Open full map”.
+- [ ] Clicking it opens `previewMapBaseUrl` without compact preview mode.
+- [ ] Full Terria chrome is visible.
+- [ ] The current dataset is transferred by the opener handshake and is auto-enabled and zoomed.
+- [ ] The built-in payload includes the same Storage API/bucket settings as the embedded preview.
+- [ ] The selected WMS layer or WFS feature type is preserved.
+- [ ] `openInExternalTerriaMapTargetUrl` still selects the legacy external path.
+- [ ] `openInExternalTerriaMapButtonText` overrides the label in both paths.
+- [ ] Popup blocking is handled gracefully.
+- [ ] Compact iframe preview behavior is unchanged.
 
 ## Investigation findings
 
@@ -112,7 +330,31 @@ Do not deliberately route user-specific catalog metadata through the Terria serv
 
 Terria's data-source models may continue to use `proxyCatalogItemUrl` where appropriate for external WMS/WFS/Esri/file resources.
 
-## Proposed architecture
+## End-to-end architecture
+
+```text
+Magda dataset page
+        |
+        | Open full map (#53)
+        v
+built-in magda-preview-map, full Terria mode
+        |
+        | opener handshake sends existing magda-item start data
+        v
+original dataset loads + zooms
+        |
+        | full-mode start-data augmentation (#55)
+        v
+lazy Magda catalog root appears in Explorer
+        |
+        | user expands / selects another dataset
+        v
+second MagdaPreviewReference resolves to native Terria model
+```
+
+The two issues are sequential but share one start-data path. #53 establishes the full-view entry point and opener payload; #55 augments that same payload on the preview-map side.
+
+## Proposed catalog architecture (#55)
 
 ```text
 Magda web client
@@ -488,7 +730,9 @@ Before creating a child, check `terria.getModelById(...)` and reuse an existing 
 
 The initially opened item is normally a distribution-level `magda-item`, while the catalog entry is dataset-level. They may therefore coexist. Adding the containing dataset again is allowed in this first implementation; deduplicating it against the original distribution is not required by #55.
 
-## Suggested implementation changes
+## Phase 2 — implement #55: Magda catalog
+
+### Suggested implementation changes
 
 ### 1. Add traits and group model
 
@@ -618,6 +862,32 @@ Opening the full map from a dataset page must still result in:
 - original item zoom behavior preserved;
 - catalog root not in the workbench;
 - second item add/remove does not remove the original item.
+
+## Cross-repository delivery sequence
+
+The recommended handoff sequence is:
+
+1. **Magda web client — #53**
+   - re-enable the button for the default built-in path;
+   - refactor/reuse embedded `magda-item` start-data construction;
+   - preserve selected WMS/WFS choice;
+   - open `previewMapBaseUrl` in full mode;
+   - preserve configured external-TerriaMap behavior.
+2. **magda-preview-map — #53 validation/hardening**
+   - test full chrome outside preview mode;
+   - test same-origin opener handshake and terminal lifecycle.
+3. **magda-preview-map — #55**
+   - register and implement lazy `magda-catalog-group`;
+   - augment only full-mode incoming `magda-item` start data;
+   - reuse `MagdaPreviewReference` children.
+4. **Integration**
+   - run the real Magda web client against the built-in full map;
+   - verify original + second dataset behavior;
+   - verify anonymous/authenticated catalog visibility.
+5. **CSP follow-up**
+   - handle additional full-view feature requirements under #56 rather than broadening policy speculatively in #53/#55.
+
+An implementation agent should not start with the catalog and assume an existing opener UI.
 
 ## Acceptance criteria for #55
 
