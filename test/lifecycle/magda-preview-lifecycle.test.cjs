@@ -377,3 +377,123 @@ test("an already-loaded item still terminates after accepted start data", async 
     "https://catalog.example.test"
   );
 });
+
+// #53: the Magda web client opens the preview map as a top-level, same-origin
+// "Open full map" window and hands it the dataset through `window.opener`.
+function fullMapHarness({ update } = {}) {
+  const messages = [];
+  const opener = {
+    postMessage(data, targetOrigin) {
+      messages.push({ data, targetOrigin });
+    }
+  };
+  let listener;
+  const previewWindow = {
+    location: { origin: "https://magda.example.test" },
+    opener,
+    postMessage() {
+      throw new Error("a top-level window must not message itself");
+    },
+    addEventListener(type, callback) {
+      assert.equal(type, "message");
+      listener = callback;
+    }
+  };
+  // A top-level window is its own parent.
+  previewWindow.parent = previewWindow;
+  const terria = {
+    configParameters: {},
+    updateFromStartData: update || (async () => result()),
+    raiseErrorToUser() {}
+  };
+  lifecycle.default(terria, previewWindow);
+  return { terria, previewWindow, opener, messages, dispatch: listener };
+}
+
+test("full-map window announces ready to its same-origin opener only", () => {
+  const h = fullMapHarness();
+  assert.deepEqual(h.messages, [
+    { data: "ready", targetOrigin: "https://magda.example.test" }
+  ]);
+});
+
+test("full-map window loads start data from its same-origin opener", async () => {
+  const received = [];
+  const h = fullMapHarness({
+    update: async (data) => {
+      received.push(data);
+      return result();
+    }
+  });
+  h.messages.length = 0;
+  const startData = magdaStartData("Opened in full map");
+
+  const processing = h.dispatch({
+    origin: "https://magda.example.test",
+    source: h.opener,
+    data: startData
+  });
+  const generation = lifecycle.beginMagdaPreviewItemLoad(h.terria);
+  await processing;
+  lifecycle.finishMagdaPreviewItemLoad(h.terria, generation);
+
+  assert.deepEqual(received, [startData]);
+  assert.deepEqual(h.messages, [
+    { data: "loading complete", targetOrigin: "https://magda.example.test" }
+  ]);
+});
+
+test("full-map window rejects start data from other windows or origins", async () => {
+  let updates = 0;
+  const h = fullMapHarness({
+    update: async () => {
+      updates += 1;
+      return result();
+    }
+  });
+  h.messages.length = 0;
+
+  await h.dispatch({
+    origin: "https://other.example.test",
+    source: h.opener,
+    data: magdaStartData()
+  });
+  await h.dispatch({
+    origin: "https://magda.example.test",
+    source: {},
+    data: magdaStartData()
+  });
+  // A top-level window has no distinct parent to trust.
+  await h.dispatch({
+    origin: "https://magda.example.test",
+    source: h.previewWindow,
+    data: magdaStartData()
+  });
+
+  assert.equal(updates, 0);
+  assert.deepEqual(h.messages, []);
+});
+
+test("full-map window reports load errors to its opener", async () => {
+  const h = fullMapHarness();
+  h.messages.length = 0;
+  const processing = h.dispatch({
+    origin: "https://magda.example.test",
+    source: h.opener,
+    data: magdaStartData()
+  });
+  const generation = lifecycle.beginMagdaPreviewItemLoad(h.terria);
+  lifecycle.finishMagdaPreviewItemLoad(h.terria, generation, {
+    title: "No compatible distributions",
+    message: "unsupported"
+  });
+  await processing;
+
+  assert.equal(h.messages.length, 1);
+  assert.equal(h.messages[0].targetOrigin, "https://magda.example.test");
+  assert.deepEqual(JSON.parse(h.messages[0].data), {
+    type: "error",
+    title: "No compatible distributions",
+    message: "unsupported"
+  });
+});

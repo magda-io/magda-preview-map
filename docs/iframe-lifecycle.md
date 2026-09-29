@@ -18,6 +18,34 @@ Application bootstrap does not emit `"loading complete"`. A later accepted
 `magda-item` message resets the lifecycle generation; completion from an older
 in-flight request is ignored.
 
+## Built-in full map
+
+The same application also serves Magda's built-in **Open full map** view
+([#53](https://github.com/magda-io/magda-preview-map/issues/53)); there is no
+separate full-map bundle.
+
+| Entry | URL | Chrome |
+| --- | --- | --- |
+| Compact preview | `<previewMapBaseUrl>#mode=preview&hideExplorerPanel=1` in an iframe | map only (`configurePreviewMode`) |
+| Full map | `<previewMapBaseUrl>` (any `mode` other than `preview`) in a new window | full TerriaJS UI: workbench, Explorer / Add data, tools |
+
+The full map uses the same protocol, with `window.opener` in place of the
+iframe parent:
+
+1. The Magda web client opens `previewMapBaseUrl` with `window.open` and keeps
+   the returned window reference.
+2. The full map sends `"ready"` to its opener.
+3. The web client checks that the message came from that window and from the
+   preview map's origin, then posts the **same** `magda-item` start data as the
+   embedded preview (including the Storage API URL, bucket, and any selected
+   WMS layer or WFS feature type), addressed to that exact origin.
+4. The item is auto-enabled and zoomed, and the full map sends the terminal
+   `"loading complete"` or error message to the opener.
+
+A top-level window is its own `parent`, so only the opener is trusted and
+messaged. Because Magda serves the preview map same-origin (under
+`/preview-map/`), no `parentMessageAllowedOrigins` entry is required.
+
 ## Parent origins
 
 The preview accepts messages only when both conditions hold:
