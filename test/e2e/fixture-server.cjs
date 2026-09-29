@@ -45,8 +45,92 @@ window.addEventListener("message", event => {
 });
 </script>`;
 
+// #55: a two-page Registry dataset listing and dataset-level records.
+function catalogDataset(id, title) {
+  return { id, name: id, aspects: { "dcat-dataset-strings": { title } } };
+}
+
+const catalogPages = {
+  first: {
+    records: [
+      catalogDataset("catalog-ds-1", "Catalog GeoJSON dataset"),
+      catalogDataset("catalog-ds-unsupported", "Catalog PDF-only dataset")
+    ],
+    hasMore: true,
+    nextPageToken: "page-2"
+  },
+  "page-2": {
+    records: [catalogDataset("catalog-ds-3", "Catalog second page dataset")],
+    hasMore: false
+  }
+};
+
+const catalogDatasetDistributions = {
+  "catalog-ds-1": [
+    { format: "PDF", downloadURL: `http://${host}:${port}/report.pdf` },
+    { format: "GeoJSON", downloadURL: `http://${host}:${port}/catalog.geojson` }
+  ],
+  "catalog-ds-unsupported": [
+    { format: "PDF", downloadURL: `http://${host}:${port}/report.pdf` }
+  ],
+  "catalog-ds-3": [
+    { format: "GeoJSON", downloadURL: `http://${host}:${port}/catalog.geojson` }
+  ]
+};
+
+function catalogResponse(url) {
+  if (url.pathname === "/api/v0/registry/records") {
+    if (url.searchParams.get("aspect") !== "dcat-dataset-strings") return;
+    return catalogPages[url.searchParams.get("pageToken") ?? "first"];
+  }
+  const match = /^\/api\/v0\/registry\/records\/(catalog-[\w-]+)$/.exec(
+    url.pathname
+  );
+  const distributions = match && catalogDatasetDistributions[match[1]];
+  if (!distributions) return;
+  return {
+    id: match[1],
+    aspects: {
+      "dataset-distributions": {
+        distributions: distributions.map((aspect, index) => ({
+          id: `${match[1]}-dist-${index}`,
+          aspects: { "dcat-distribution-strings": aspect }
+        }))
+      }
+    }
+  };
+}
+
 http
   .createServer((request, response) => {
+    const catalogBody = catalogResponse(
+      new URL(request.url ?? "/", `http://${host}:${port}`)
+    );
+    if (catalogBody) {
+      return send(
+        response,
+        200,
+        "application/json",
+        JSON.stringify(catalogBody)
+      );
+    }
+    if (request.url === "/catalog.geojson") {
+      return send(
+        response,
+        200,
+        "application/json",
+        JSON.stringify({
+          type: "FeatureCollection",
+          features: [
+            {
+              type: "Feature",
+              properties: { name: "Catalog browser fixture" },
+              geometry: { type: "Point", coordinates: [151.21, -33.87] }
+            }
+          ]
+        })
+      );
+    }
     if (request.url === "/health") {
       return send(response, 200, "text/plain", "ok");
     }
