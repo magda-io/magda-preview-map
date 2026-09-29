@@ -1,6 +1,11 @@
 import { TerriaErrorSeverity } from "terriajs/lib/Core/TerriaError";
+import { BaseModel } from "terriajs/lib/Models/Definition/Model";
 import type Terria from "terriajs/lib/Models/Terria";
 
+import {
+  addMagdaCatalogToStartData,
+  MAGDA_CATALOG_ROOT_ID
+} from "./magdaCatalog";
 import { MAGDA_ITEM_TYPE } from "./magdaPreviewCompatibility";
 
 interface MessageTarget {
@@ -126,6 +131,21 @@ export async function selectLegacyPreviewBaseMap(
   }
 }
 
+/**
+ * In the full map (#53), add the lazy Magda catalog root (#55) beside the
+ * incoming `magda-item`. The compact preview is left unchanged.
+ */
+export function withMagdaCatalog(
+  terria: Pick<Terria, "userProperties" | "getModelById">,
+  startData: unknown
+): unknown {
+  return addMagdaCatalogToStartData(startData, {
+    mode: terria.userProperties.get("mode"),
+    hasCatalogRoot:
+      terria.getModelById(BaseModel, MAGDA_CATALOG_ROOT_ID) !== undefined
+  });
+}
+
 function errorText(value: unknown, fallback: string): string {
   if (typeof value === "string" && value.length > 0) return value;
   return fallback;
@@ -247,7 +267,7 @@ export default function configureMagdaPreviewLifecycle(
 
       try {
         const result = await terria.updateFromStartData(
-          event.data,
+          isMagdaPreview ? withMagdaCatalog(terria, event.data) : event.data,
           "Start data from message from parent window",
           TerriaErrorSeverity.Error
         );

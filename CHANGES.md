@@ -2,6 +2,18 @@
 
 > The repo was part of [magda main repo](https://github.com/magda-io/magda). For history before v0.0.58, please check [CHANGES.md of main repo](https://github.com/magda-io/magda/blob/master/CHANGES.md).
 
+## 2.1.0
+
+- Added a lazy **Magda data catalog** to the full map opened by Magda's
+  "Open full map" button (#55). Users can browse the deployment's datasets in
+  the Explorer and add further datasets beside the one they opened. Datasets
+  are listed one bounded Registry page at a time, only when the catalog is
+  expanded, and the Registry decides which datasets the viewer may see. The
+  compact embedded preview is unchanged.
+- Dataset-level `magda-item` references now pick a distribution by the preview
+  format preference (WMS, Esri MapServer, WFS, Esri FeatureServer, GeoJSON,
+  CSV, KML/KMZ, CZML) instead of Registry order.
+
 ## 2.0.0
 
 - Fixed `magda-item` previews failing with `Invalid base URL` when Magda's
